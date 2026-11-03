@@ -15,9 +15,6 @@ struct NiriEdgeOutset {
     /// The gaps between windows side by side and one above another.
     let gapX: CGFloat
     let gapY: CGFloat
-    /// Other frames whose edges are the screen's or the bar's too: a lone window fills one of them
-    /// (the fill or fullscreen frame), which a border clearance can leave apart from `bounds`.
-    var otherBounds: [CGRect] = []
 
     static let none = NiriEdgeOutset(points: 0, bounds: .null, gapX: 0, gapY: 0)
 
@@ -42,26 +39,24 @@ struct NiriEdgeOutset {
             gapX: horizontal ? primaryGap : secondaryGap,
             gapY: horizontal ? secondaryGap : primaryGap
         )
-        otherBounds = [area.singleWindowFrame, area.borderSafeFillFrame, area.fullscreenLayoutFrame, area.viewFrame]
     }
 
     func apply(_ frame: CGRect) -> CGRect {
         guard points > 0, !frame.isEmpty, !bounds.isNull, frame.intersects(bounds) else { return frame }
-        let all = [bounds] + otherBounds.filter { !$0.isNull && !$0.isEmpty }
-        func on(_ value: CGFloat, _ edge: (CGRect) -> CGFloat) -> Bool {
-            all.contains { abs(value - edge($0)) < 0.5 }
-        }
+        // An edge on or past the working frame's: a lone window fills a frame wider than the working
+        // frame (ungapped fullscreen, or a border clearance), whose edges are the screen's.
+        let tolerance: CGFloat = 0.5
         var minX = frame.minX, maxX = frame.maxX, minY = frame.minY, maxY = frame.maxY
-        if on(minX, \.minX) { minX -= points }
-        if on(maxX, \.maxX) {
+        if minX <= bounds.minX + tolerance { minX -= points }
+        if maxX >= bounds.maxX - tolerance {
             maxX += points
-        } else if gapX == 0, maxX < bounds.maxX {
+        } else if gapX == 0 {
             maxX += points
         }
-        if on(minY, \.minY) { minY -= points }
-        if on(maxY, \.maxY) {
+        if minY <= bounds.minY + tolerance { minY -= points }
+        if maxY >= bounds.maxY - tolerance {
             maxY += points
-        } else if gapY == 0, maxY < bounds.maxY {
+        } else if gapY == 0 {
             maxY += points
         }
         return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
