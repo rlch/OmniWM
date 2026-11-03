@@ -15,6 +15,9 @@ struct NiriEdgeOutset {
     /// The gaps between windows side by side and one above another.
     let gapX: CGFloat
     let gapY: CGFloat
+    /// Other frames whose edges are the screen's or the bar's too: a lone window fills one of them
+    /// (the fill or fullscreen frame), which a border clearance can leave apart from `bounds`.
+    var otherBounds: [CGRect] = []
 
     static let none = NiriEdgeOutset(points: 0, bounds: .null, gapX: 0, gapY: 0)
 
@@ -27,7 +30,7 @@ struct NiriEdgeOutset {
 
     init(
         points: CGFloat,
-        workingFrame: CGRect,
+        area: WorkingAreaContext,
         primaryGap: CGFloat,
         secondaryGap: CGFloat,
         orientation: Monitor.Orientation
@@ -35,24 +38,28 @@ struct NiriEdgeOutset {
         let horizontal = orientation == .horizontal
         self.init(
             points: points,
-            bounds: workingFrame,
+            bounds: area.workingFrame,
             gapX: horizontal ? primaryGap : secondaryGap,
             gapY: horizontal ? secondaryGap : primaryGap
         )
+        otherBounds = [area.singleWindowFrame, area.borderSafeFillFrame, area.fullscreenLayoutFrame, area.viewFrame]
     }
 
     func apply(_ frame: CGRect) -> CGRect {
         guard points > 0, !frame.isEmpty, !bounds.isNull, frame.intersects(bounds) else { return frame }
-        let tolerance: CGFloat = 0.5
+        let all = [bounds] + otherBounds.filter { !$0.isNull && !$0.isEmpty }
+        func on(_ value: CGFloat, _ edge: (CGRect) -> CGFloat) -> Bool {
+            all.contains { abs(value - edge($0)) < 0.5 }
+        }
         var minX = frame.minX, maxX = frame.maxX, minY = frame.minY, maxY = frame.maxY
-        if abs(minX - bounds.minX) < tolerance { minX -= points }
-        if abs(maxX - bounds.maxX) < tolerance {
+        if on(minX, \.minX) { minX -= points }
+        if on(maxX, \.maxX) {
             maxX += points
         } else if gapX == 0, maxX < bounds.maxX {
             maxX += points
         }
-        if abs(minY - bounds.minY) < tolerance { minY -= points }
-        if abs(maxY - bounds.maxY) < tolerance {
+        if on(minY, \.minY) { minY -= points }
+        if on(maxY, \.maxY) {
             maxY += points
         } else if gapY == 0, maxY < bounds.maxY {
             maxY += points

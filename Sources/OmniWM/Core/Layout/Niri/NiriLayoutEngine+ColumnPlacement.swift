@@ -41,7 +41,7 @@ extension NiriLayoutEngine {
                 time: time,
                 edgeOutset: NiriEdgeOutset(
                     points: edgeOutset,
-                    workingFrame: layoutArea.workingFrame,
+                    area: layoutArea,
                     primaryGap: context.primaryGap,
                     secondaryGap: 0,
                     orientation: orientation
@@ -134,7 +134,7 @@ extension NiriLayoutEngine {
                 time: pass.context.time,
                 edgeOutset: NiriEdgeOutset(
                     points: edgeOutset,
-                    workingFrame: pass.context.area.workingFrame,
+                    area: pass.context.area,
                     primaryGap: pass.context.primaryGap,
                     secondaryGap: pass.context.secondaryGap,
                     orientation: pass.context.orientation

@@ -47,6 +47,16 @@ final class NiriEdgeOutsetTests: XCTestCase {
         )
     }
 
+    func testALoneWindowFillingTheVisibleFrameGrowsPastAWorkingFrameInsetByAClearance() {
+        // The laptop: the visible frame 0,0 2056x1290; the working frame 1 pt in at the top and bottom.
+        let visible = CGRect(x: 0, y: 0, width: 2_056, height: 1_290)
+        let area = WorkingAreaContext(
+            workingFrame: visible.insetBy(dx: 0, dy: 1), borderSafeFillFrame: visible, viewFrame: visible, scale: 2
+        )
+        let outset = NiriEdgeOutset(points: 1, area: area, primaryGap: 0, secondaryGap: 0, orientation: .horizontal)
+        XCTAssertEqual(outset.apply(visible), CGRect(x: -1, y: -1, width: 2_058, height: 1_292))
+    }
+
     func testZeroOrAWindowOffTheScreenIsLeftAsItIs() {
         let frame = CGRect(x: 0, y: 0, width: 500, height: 700)
         XCTAssertEqual(NiriEdgeOutset(points: 0, bounds: bounds, gapX: 0, gapY: 0).apply(frame), frame)
@@ -57,11 +67,8 @@ final class NiriEdgeOutsetTests: XCTestCase {
 
     func testTheOrientationPicksWhichGapIsWhich() {
         let vertical = NiriEdgeOutset(
-            points: 1,
-            workingFrame: bounds,
-            primaryGap: 10,
-            secondaryGap: 0,
-            orientation: .vertical
+            points: 1, area: WorkingAreaContext(workingFrame: bounds, viewFrame: bounds, scale: 2),
+            primaryGap: 10, secondaryGap: 0, orientation: .vertical
         )
         XCTAssertEqual(vertical.gapX, 0)
         XCTAssertEqual(vertical.gapY, 10)
