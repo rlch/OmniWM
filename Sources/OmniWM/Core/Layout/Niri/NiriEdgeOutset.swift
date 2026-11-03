@@ -5,7 +5,7 @@ import CoreGraphics
 
 /// Tiled windows grown past the edges they touch (`niri.edgeOutset`): macOS draws a 1 pt outline
 /// around every window, which shows as a line where a window ends exactly on a screen or bar edge.
-/// An edge on the working frame's edge grows that far past it, and with no gap between windows, an
+/// A left or right edge on the working frame's edge grows that far past it, and with no gap between windows, an
 /// edge that meets the next window's grows into it, so the seam overlaps by the same amount. It is
 /// applied to the final window frames, after which column is visible and on which display has been
 /// decided, so it never counts as running onto a neighbouring display.
@@ -46,19 +46,17 @@ struct NiriEdgeOutset {
         // An edge on or past the working frame's: a lone window fills a frame wider than the working
         // frame (ungapped fullscreen, or a border clearance), whose edges are the screen's.
         let tolerance: CGFloat = 0.5
-        var minX = frame.minX, maxX = frame.maxX, minY = frame.minY, maxY = frame.maxY
+        var minX = frame.minX, maxX = frame.maxX, maxY = frame.maxY
+        let minY = frame.minY
         if minX <= bounds.minX + tolerance { minX -= points }
         if maxX >= bounds.maxX - tolerance {
             maxX += points
         } else if gapX == 0 {
             maxX += points
         }
-        if minY <= bounds.minY + tolerance { minY -= points }
-        if maxY >= bounds.maxY - tolerance {
-            maxY += points
-        } else if gapY == 0 {
-            maxY += points
-        }
+        // Not past the top or bottom edge: macOS keeps a window's top at or below the menu bar and caps
+        // its height at the screen's less the menu bar, so it would only be moved down and back.
+        if maxY < bounds.maxY - tolerance, gapY == 0 { maxY += points }
         return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
     }
 }

@@ -406,7 +406,7 @@ final class NiriScrollVisibilityTests: XCTestCase {
         let layout = horizontalNeighborLayout(fixture, liveOffset: 0)
         let frame = try XCTUnwrap(layout.frames[fixture.tokens[0]])
         XCTAssertNil(layout.hiddenHandles[fixture.tokens[0]])
-        XCTAssertEqual(frame, CGRect(x: -1, y: -1, width: 1_002, height: 802))
+        XCTAssertEqual(frame, CGRect(x: -1, y: 0, width: 1_002, height: 800))
     }
 
     func testTheMinorityRuleCountsEachSideAgainstTheWholeRect() {

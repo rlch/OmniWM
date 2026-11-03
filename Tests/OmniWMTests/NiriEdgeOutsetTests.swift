@@ -11,15 +11,15 @@ final class NiriEdgeOutsetTests: XCTestCase {
 
     func testEdgesOnTheWorkingFrameGrowPastIt() {
         let outset = NiriEdgeOutset(points: 1, bounds: bounds, gapX: 0, gapY: 0)
-        // The left column: past the left, top and bottom edges, and 1 pt into the next column.
+        // The left column: past the left edge and 1 pt into the next column; never past the top or bottom.
         XCTAssertEqual(
             outset.apply(CGRect(x: 0, y: 0, width: 500, height: 700)),
-            CGRect(x: -1, y: -1, width: 502, height: 702)
+            CGRect(x: -1, y: 0, width: 502, height: 700)
         )
-        // The right column: past the right, top and bottom edges; its left edge is the seam, left as it is.
+        // The right column: past the right edge; its left edge is the seam, left as it is.
         XCTAssertEqual(
             outset.apply(CGRect(x: 500, y: 0, width: 500, height: 700)),
-            CGRect(x: 500, y: -1, width: 501, height: 702)
+            CGRect(x: 500, y: 0, width: 501, height: 700)
         )
     }
 
@@ -27,11 +27,11 @@ final class NiriEdgeOutsetTests: XCTestCase {
         let outset = NiriEdgeOutset(points: 1, bounds: bounds, gapX: 0, gapY: 0)
         XCTAssertEqual(
             outset.apply(CGRect(x: 0, y: 0, width: 1_000, height: 350)),
-            CGRect(x: -1, y: -1, width: 1_002, height: 352)
+            CGRect(x: -1, y: 0, width: 1_002, height: 351)
         )
         XCTAssertEqual(
             outset.apply(CGRect(x: 0, y: 350, width: 1_000, height: 350)),
-            CGRect(x: -1, y: 350, width: 1_002, height: 351)
+            CGRect(x: -1, y: 350, width: 1_002, height: 350)
         )
     }
 
@@ -39,7 +39,7 @@ final class NiriEdgeOutsetTests: XCTestCase {
         let outset = NiriEdgeOutset(points: 1, bounds: bounds, gapX: 10, gapY: 10)
         XCTAssertEqual(
             outset.apply(CGRect(x: 0, y: 0, width: 495, height: 700)),
-            CGRect(x: -1, y: -1, width: 496, height: 702)
+            CGRect(x: -1, y: 0, width: 496, height: 700)
         )
         XCTAssertEqual(
             outset.apply(CGRect(x: 505, y: 10, width: 495, height: 680)),
@@ -54,7 +54,7 @@ final class NiriEdgeOutsetTests: XCTestCase {
             workingFrame: visible.insetBy(dx: 0, dy: 1), borderSafeFillFrame: visible, viewFrame: visible, scale: 2
         )
         let outset = NiriEdgeOutset(points: 1, area: area, primaryGap: 0, secondaryGap: 0, orientation: .horizontal)
-        XCTAssertEqual(outset.apply(visible), CGRect(x: -1, y: -1, width: 2_058, height: 1_292))
+        XCTAssertEqual(outset.apply(visible), CGRect(x: -1, y: 0, width: 2_058, height: 1_290))
     }
 
     func testZeroOrAWindowOffTheScreenIsLeftAsItIs() {
