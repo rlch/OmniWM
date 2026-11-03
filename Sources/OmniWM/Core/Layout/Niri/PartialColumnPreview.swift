@@ -7,8 +7,8 @@ import ScreenCaptureKit
 /// A live view of a column hidden because it would run onto a neighbouring display
 /// (`niri.partialColumnPreview`): a borderless panel over the strip it would take on its own display,
 /// showing a ScreenCaptureKit stream of its window cropped to that strip. A click focuses the window.
-/// It streams only while the strip is shown, the workspace is active and the layout settled; without
-/// Screen Recording there is no panel and the strip stays empty, as before.
+/// A panel and its stream stay through relayout and motion, and go once the column is back in view, the
+/// workspace is not shown or the setting is off; without Screen Recording there is no panel.
 @MainActor
 final class PartialColumnPreviewController {
     struct System {
@@ -27,18 +27,42 @@ final class PartialColumnPreviewController {
         self.system = system
     }
 
-    /// The strips workspace `workspaceId` shows now; none to take its panels away.
-    func update(workspaceId: WorkspaceDescriptor.ID, strips: [WindowToken: NiriPartialStrip]) {
-        let wanted = system.captureAllowed() ? strips : [:]
-        for token in tokensByWorkspace[workspaceId] ?? [] where wanted[token] == nil {
-            panels.removeValue(forKey: token)?.destroy()
+    /// What workspace `workspaceId`'s layout found: the strips of its hidden partial columns, whether it
+    /// is shown with the setting on (`active`), and whether it has stopped moving (`settled`). Panels and
+    /// their streams stay through relayout and motion; one goes when its column is back in view once
+    /// settled, when the workspace is not shown, or when the setting is off.
+    func update(
+        workspaceId: WorkspaceDescriptor.ID,
+        strips: [WindowToken: NiriPartialStrip],
+        active: Bool,
+        settled: Bool
+    ) {
+        let allowed = active && system.captureAllowed()
+        var kept = Set<WindowToken>()
+        for token in tokensByWorkspace[workspaceId] ?? [] {
+            if !allowed {
+                remove(token, why: active ? "no Screen Recording" : "workspace not shown or setting off")
+            } else if settled, strips[token] == nil {
+                remove(token, why: "column back in view")
+            } else {
+                kept.insert(token)
+            }
         }
-        for (token, strip) in wanted {
-            let panel = panels[token] ?? makePanel(for: token)
-            panels[token] = panel
-            panel.show(strip)
+        if allowed {
+            for (token, strip) in strips {
+                let panel = panels[token] ?? makePanel(for: token)
+                panels[token] = panel
+                panel.show(strip)
+                kept.insert(token)
+            }
         }
-        tokensByWorkspace[workspaceId] = wanted.isEmpty ? nil : Set(wanted.keys)
+        tokensByWorkspace[workspaceId] = kept.isEmpty ? nil : kept
+    }
+
+    private func remove(_ token: WindowToken, why: String) {
+        guard let panel = panels.removeValue(forKey: token) else { return }
+        Log.preview.notice("partial column preview removed for window \(token.windowId): \(why)")
+        panel.destroy()
     }
 
     func removeAll() {
@@ -54,7 +78,8 @@ final class PartialColumnPreviewController {
     }
 
     private func makePanel(for token: WindowToken) -> PartialColumnPreviewPanel {
-        let panel = PartialColumnPreviewPanel(onClick: { [system] in system.focus(token) })
+        Log.preview.notice("partial column preview created for window \(token.windowId)")
+        let panel = PartialColumnPreviewPanel(windowId: token.windowId, onClick: { [system] in system.focus(token) })
         guard let handle = system.handle(token) else { return panel }
         panel.startStream = { [system, weak panel] size, generation in
             guard let window = await system.window(token), let panel else { return }
@@ -74,6 +99,7 @@ final class PartialColumnPreviewController {
 @MainActor
 final class PartialColumnPreviewPanel: NSPanel {
     private let contentLayer = CALayer()
+    private let windowId: Int
     private let onClick: @MainActor () -> Void
     private var strip: NiriPartialStrip?
     private var output: OverviewPreviewStream?
@@ -87,7 +113,8 @@ final class PartialColumnPreviewPanel: NSPanel {
     private var destroyed = false
     var startStream: (@MainActor (CGSize, Int) async -> Void)?
 
-    init(onClick: @escaping @MainActor () -> Void) {
+    init(windowId: Int, onClick: @escaping @MainActor () -> Void) {
+        self.windowId = windowId
         self.onClick = onClick
         super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         isFloatingPanel = false
@@ -128,7 +155,7 @@ final class PartialColumnPreviewPanel: NSPanel {
         setFrame(next.strip, display: false)
         contentLayer.frame = CGRect(origin: .zero, size: next.strip.size)
         applyCrop()
-        orderFront(nil)
+        orderFrontRegardless()
         // A new stream when the window's size changes; the same one while only the strip moves.
         guard streamedSize != next.frame.size, let startStream else { return }
         streamedSize = next.frame.size
@@ -141,7 +168,7 @@ final class PartialColumnPreviewPanel: NSPanel {
         guard !destroyed, started == generation else { return }
         let output = OverviewPreviewStream(
             onReady: { [weak self] in DispatchQueue.main.async { MainActor.assumeIsolated { self?.takeFrame() } } },
-            onFailure: { [weak self] in DispatchQueue.main.async { MainActor.assumeIsolated { self?.stopStream() } } }
+            onFailure: { [weak self] in DispatchQueue.main.async { MainActor.assumeIsolated { self?.streamFailed() } } }
         )
         do {
             let control = try OverviewNativePreviewStream(window: window, request: request, output: output)
@@ -149,6 +176,10 @@ final class PartialColumnPreviewPanel: NSPanel {
             self.control = control
             try await control.start()
         } catch {
+            Log.preview
+                .notice(
+                    "partial column preview stream failed for window \(self.windowId): \(error.localizedDescription)"
+                )
             ScreenCapturePermissionMonitor.shared.noteCaptureFailure(error)
             stopStream()
         }
@@ -157,6 +188,9 @@ final class PartialColumnPreviewPanel: NSPanel {
     private func takeFrame() {
         guard let frame = output?.take() else { return }
         let previous = frameShown
+        if previous == nil {
+            Log.preview.notice("partial column preview first frame for window \(self.windowId)")
+        }
         frameShown = frame
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -180,6 +214,13 @@ final class PartialColumnPreviewPanel: NSPanel {
             height: unit.height * window.height
         )
         CATransaction.commit()
+    }
+
+    /// The stream stopped by itself: the next `show` starts another.
+    private func streamFailed() {
+        Log.preview.notice("partial column preview stream stopped for window \(self.windowId)")
+        stopStream()
+        streamedSize = nil
     }
 
     private func stopStream() {
@@ -218,7 +259,9 @@ extension NiriLayoutHandler {
     func updatePartialColumnPreviews(pass: NiriLayoutPass, isActiveWorkspace: Bool, isSettled: Bool) {
         partialColumnPreviews.update(
             workspaceId: pass.wsId,
-            strips: isActiveWorkspace && isSettled ? pass.engine.partialStrips[pass.wsId] ?? [:] : [:]
+            strips: pass.engine.partialStrips[pass.wsId] ?? [:],
+            active: isActiveWorkspace && pass.engine.partialColumnPreview,
+            settled: isSettled
         )
     }
 }

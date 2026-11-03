@@ -35,22 +35,31 @@ final class PartialColumnPreviewTests: XCTestCase {
         XCTAssertEqual(unit.height, 1)
     }
 
-    func testAPanelPerStripOfTheWorkspaceGoingWithIt() {
+    func testAPanelPerStripStaysThroughMotionAndGoesOnceItsColumnIsBackInView() {
         let previews = controller()
-        previews.update(workspaceId: workspace, strips: [slack: strip, firefox: strip])
+        previews.update(workspaceId: workspace, strips: [slack: strip, firefox: strip], active: true, settled: true)
         XCTAssertEqual(previews.shownTokens, [slack, firefox])
-        previews.update(workspaceId: workspace, strips: [slack: strip])
+        // Moving: a strip missing from a frame of the motion keeps its panel and stream.
+        previews.update(workspaceId: workspace, strips: [slack: strip], active: true, settled: false)
+        XCTAssertEqual(previews.shownTokens, [slack, firefox])
+        // Settled with Firefox's column back in view: its panel goes.
+        previews.update(workspaceId: workspace, strips: [slack: strip], active: true, settled: true)
         XCTAssertEqual(previews.shownTokens, [slack])
-        // Another workspace's update leaves this one's alone; this one's empty takes its panels.
-        previews.update(workspaceId: WorkspaceDescriptor.ID(), strips: [:])
+        // Another workspace's update leaves this one's alone.
+        previews.update(workspaceId: WorkspaceDescriptor.ID(), strips: [:], active: true, settled: true)
         XCTAssertEqual(previews.shownTokens, [slack])
-        previews.update(workspaceId: workspace, strips: [:])
+    }
+
+    func testTheWorkspaceNotShownOrTheSettingOffTakesItsPanels() {
+        let previews = controller()
+        previews.update(workspaceId: workspace, strips: [slack: strip], active: true, settled: true)
+        previews.update(workspaceId: workspace, strips: [slack: strip], active: false, settled: false)
         XCTAssertEqual(previews.shownTokens, [])
     }
 
     func testWithoutScreenRecordingThereIsNoPanel() {
         let previews = controller(allowed: false)
-        previews.update(workspaceId: workspace, strips: [slack: strip])
+        previews.update(workspaceId: workspace, strips: [slack: strip], active: true, settled: true)
         XCTAssertEqual(previews.shownTokens, [])
     }
 
