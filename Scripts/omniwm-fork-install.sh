@@ -19,6 +19,10 @@
 #
 # The first switch from the cask's app (signed by upstream) asks for Accessibility and Input
 # Monitoring again, once: macOS keys them to the signer. Later builds signed alike keep them.
+#
+# A rebase that bumps settings.toml's schemaVersion migrates it on first launch: copy the migrated
+# file back into dotfiles (dot_config/omniwm/.settings.toml) at once, or chezmoi reverts it until
+# OmniWM's pre-migration backups fill and it stops writing its settings.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
