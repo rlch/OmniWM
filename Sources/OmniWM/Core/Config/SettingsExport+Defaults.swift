@@ -126,7 +126,8 @@ extension SettingsExport.Niri {
             allowOverscroll: false,
             overscrollVisibleStripPercent: 5,
             partialColumnsAcrossDisplays: false,
-            edgeOutset: 0
+            edgeOutset: 0,
+            partialColumnPreview: false
         )
     }
 }

@@ -59,4 +59,5 @@ struct NiriColumnLayoutPass {
     let viewPosition: CGFloat
     let selectedNodeId: NodeId?
     let settledContentFrame: CGRect?
+    var workspaceId: WorkspaceDescriptor.ID?
 }

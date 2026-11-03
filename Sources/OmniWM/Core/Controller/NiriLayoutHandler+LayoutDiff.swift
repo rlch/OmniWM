@@ -39,6 +39,7 @@ extension NiriLayoutHandler {
             snapshot: snapshot,
             isSettled: isSettled
         )
+        updatePartialColumnPreviews(pass: pass, isActiveWorkspace: snapshot.isActiveWorkspace, isSettled: isSettled)
 
         var directives = relayoutAnimationDirectives(
             pass: pass, state: state, snapshot: snapshot,

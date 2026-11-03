@@ -409,6 +409,23 @@ final class NiriScrollVisibilityTests: XCTestCase {
         XCTAssertEqual(frame, CGRect(x: -1, y: 0, width: 1_002, height: 800))
     }
 
+    func testAColumnHiddenAtANeighborLeavesItsStripForTheLiveView() throws {
+        let fixture = makeHorizontalNeighborFixture(neighborX: -1_000)
+        fixture.engine.partialColumnPreview = true
+        let layout = horizontalNeighborLayout(fixture, liveOffset: 200)
+        XCTAssertEqual(layout.hiddenHandles[fixture.tokens[0]], .left)
+        let strip = try XCTUnwrap(fixture.engine.partialStrips[fixture.workspaceId]?[fixture.tokens[0]])
+        XCTAssertEqual(strip.frame, CGRect(x: -200, y: 0, width: 1_000, height: 800))
+        XCTAssertEqual(strip.strip, CGRect(x: 0, y: 0, width: 800, height: 800))
+        // Off, or the column back in view: none.
+        fixture.engine.partialColumnPreview = false
+        _ = horizontalNeighborLayout(fixture, liveOffset: 200)
+        XCTAssertNil(fixture.engine.partialStrips[fixture.workspaceId])
+        fixture.engine.partialColumnPreview = true
+        _ = horizontalNeighborLayout(fixture, liveOffset: 0)
+        XCTAssertNil(fixture.engine.partialStrips[fixture.workspaceId]?[fixture.tokens[0]])
+    }
+
     func testTheMinorityRuleCountsEachSideAgainstTheWholeRect() {
         let viewport = CGRect(x: 0, y: 0, width: 1_366, height: 800)
         let neighbor = HiddenPlacementMonitorContext(

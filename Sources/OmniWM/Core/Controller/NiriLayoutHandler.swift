@@ -48,6 +48,7 @@ enum StructuralMutationOutcome: Equatable {
 
 @MainActor final class NiriLayoutHandler {
     weak var controller: WMController?
+    private(set) lazy var partialColumnPreviews = makePartialColumnPreviews()
 
     struct NiriLayoutPass {
         let motion: MotionSnapshot

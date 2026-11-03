@@ -41,6 +41,13 @@ final class NiriLayoutEngine {
     /// Points tiled windows grow past the screen and bar edges they touch, and into each other (`NiriEdgeOutset`).
     var edgeOutset: CGFloat = 0
 
+    /// A column hidden because it would run onto a neighbouring display is shown live in the strip it
+    /// would take on its own display (`PartialColumnPreviewController`).
+    var partialColumnPreview = false
+
+    /// The strips of such columns, by workspace, as the last layout of it found them.
+    var partialStrips: [WorkspaceDescriptor.ID: [WindowToken: NiriPartialStrip]] = [:]
+
     var singleWindowFit: SingleWindowFit = .fullScreen
 
     var edgeOverscroll: NiriEdgeOverscroll = .disabled
@@ -262,15 +269,15 @@ final class NiriLayoutEngine {
         presetContainerPrimarySpans: [PresetSize]? = nil,
         defaultContainerPrimarySpan: CGFloat?? = nil,
         partialColumnsAcrossDisplays: Bool? = nil,
-        edgeOutset: CGFloat? = nil
+        edgeOutset: CGFloat? = nil,
+        partialColumnPreview: Bool? = nil
     ) {
         assertSanctionedMutation()
-        if let partialColumnsAcrossDisplays {
-            self.partialColumnsAcrossDisplays = partialColumnsAcrossDisplays
-        }
-        if let edgeOutset {
-            self.edgeOutset = edgeOutset.clamped(to: 0 ... 8)
-        }
+        updateDisplayEdgeConfiguration(
+            partialColumnsAcrossDisplays: partialColumnsAcrossDisplays,
+            edgeOutset: edgeOutset,
+            partialColumnPreview: partialColumnPreview
+        )
         if let max = visibleContainerCount {
             self.visibleContainerCount = max.clamped(to: 1 ... 5)
         }

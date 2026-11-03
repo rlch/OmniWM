@@ -82,7 +82,8 @@ extension NiriLayoutHandler {
         containerPrimarySpanPresets: [Double]? = nil,
         defaultContainerPrimarySpan: Double?? = nil,
         partialColumnsAcrossDisplays: Bool? = nil,
-        edgeOutset: Double? = nil
+        edgeOutset: Double? = nil,
+        partialColumnPreview: Bool? = nil
     ) {
         guard let controller else { return }
         controller.workspaceManager.withEngineMutationScope {
@@ -96,7 +97,8 @@ extension NiriLayoutHandler {
                 presetContainerPrimarySpans: containerPrimarySpanPresets?.map { .proportion($0) },
                 defaultContainerPrimarySpan: defaultContainerPrimarySpan.map { $0.map { CGFloat($0) } },
                 partialColumnsAcrossDisplays: partialColumnsAcrossDisplays,
-                edgeOutset: edgeOutset.map { CGFloat($0) }
+                edgeOutset: edgeOutset.map { CGFloat($0) },
+                partialColumnPreview: partialColumnPreview
             )
         }
         refreshResolvedMonitorSettings(rebalanceChangedSpans: defaultContainerPrimarySpan != nil)

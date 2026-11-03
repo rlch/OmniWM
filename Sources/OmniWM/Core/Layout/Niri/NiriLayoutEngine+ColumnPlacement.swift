@@ -83,7 +83,8 @@ extension NiriLayoutEngine {
             viewPosition: viewPosition,
             selectedNodeId: selection.state.selectedNodeId,
             settledContentFrame: sampling.isSettled
-                ? settledContentFrame(context: context, activeSpan: activeColumn.span) : nil
+                ? settledContentFrame(context: context, activeSpan: activeColumn.span) : nil,
+            workspaceId: selection.workspaceId
         )
     }
 
@@ -186,6 +187,7 @@ extension NiriLayoutEngine {
             for index in windowSpan.indices {
                 result.hiddenHandles[windowSpan[index].token] = hiddenEdge.encodedHideSide
             }
+            notePartialStrip(projectedColumn, rect: visibilityRect, area: layoutArea.workingFrame, pass: pass)
             renderedContainerRect = layoutArea.hiddenRenderedContainerRect(
                 canonicalRect: visibility.canonicalRect,
                 edge: hiddenEdge,

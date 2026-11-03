@@ -106,6 +106,7 @@ extension NiriLayoutEngine {
         if let excludedTokens { setProjectionExclusions(excludedTokens, in: workspaceId) }
         let excludedTokens = projectionExclusions(in: workspaceId)
         let projectedColumns = projectedColumns(in: workspaceId)
+        partialStrips[workspaceId] = nil
         guard !projectedColumns.isEmpty else { return }
         let context = NiriCalculationContext(
             geometry: geometry, time: animationTime ?? CACurrentMediaTime(),

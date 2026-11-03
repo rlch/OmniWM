@@ -82,7 +82,8 @@ extension WMController {
         containerPrimarySpanPresets: [Double]? = nil,
         defaultContainerPrimarySpan: Double?? = nil,
         partialColumnsAcrossDisplays: Bool? = nil,
-        edgeOutset: Double? = nil
+        edgeOutset: Double? = nil,
+        partialColumnPreview: Bool? = nil
     ) {
         niriLayoutHandler.updateNiriConfig(
             visibleContainerCount: visibleContainerCount,
@@ -94,7 +95,8 @@ extension WMController {
             containerPrimarySpanPresets: containerPrimarySpanPresets,
             defaultContainerPrimarySpan: defaultContainerPrimarySpan,
             partialColumnsAcrossDisplays: partialColumnsAcrossDisplays,
-            edgeOutset: edgeOutset
+            edgeOutset: edgeOutset,
+            partialColumnPreview: partialColumnPreview
         )
     }
 
