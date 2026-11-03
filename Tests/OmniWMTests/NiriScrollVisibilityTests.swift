@@ -384,6 +384,42 @@ final class NiriScrollVisibilityTests: XCTestCase {
         }
     }
 
+    func testPartialColumnsAcrossDisplaysKeepAColumnMostlyOnItsOwnDisplayVisible() throws {
+        // 200 of the column's 1,000 points over the neighbour: macOS clips them, so it shows.
+        let fixture = makeHorizontalNeighborFixture(neighborX: -1_000)
+        fixture.engine.partialColumnsAcrossDisplays = true
+        let layout = horizontalNeighborLayout(fixture, liveOffset: 200)
+        let frame = try XCTUnwrap(layout.frames[fixture.tokens[0]])
+        XCTAssertNil(layout.hiddenHandles[fixture.tokens[0]])
+        XCTAssertEqual(frame.minX, -200)
+        // 600 over it: macOS would draw it on the neighbour, so it still hides.
+        XCTAssertEqual(horizontalNeighborLayout(fixture, liveOffset: 600).hiddenHandles[fixture.tokens[0]], .left)
+        // Off, the 200 points are enough to hide it, as upstream.
+        fixture.engine.partialColumnsAcrossDisplays = false
+        XCTAssertEqual(horizontalNeighborLayout(fixture, liveOffset: 200).hiddenHandles[fixture.tokens[0]], .left)
+    }
+
+    func testTheMinorityRuleCountsEachSideAgainstTheWholeRect() {
+        let viewport = CGRect(x: 0, y: 0, width: 1_366, height: 800)
+        let neighbor = HiddenPlacementMonitorContext(
+            id: .init(displayId: 102),
+            frame: CGRect(x: -2_056, y: 0, width: 2_056, height: 800),
+            visibleFrame: CGRect(x: -2_056, y: 0, width: 2_056, height: 800)
+        )
+        let own = HiddenPlacementMonitorContext(id: .init(displayId: 101), frame: viewport, visibleFrame: viewport)
+        func edge(_ rect: CGRect, allowing: Bool) -> AxisHideEdge? {
+            NiriMonitorPlaneGeometry.overflowEdgeIntersectingNeighboringMonitor(
+                rect, viewportFrame: viewport, orientation: .horizontal,
+                hiddenPlacementMonitor: own, hiddenPlacementMonitors: [own, neighbor], allowingMinority: allowing
+            )
+        }
+        // Slack, 910 wide, 227 over the laptop.
+        let slack = CGRect(x: -227, y: 0, width: 910, height: 800)
+        XCTAssertEqual(edge(slack, allowing: false), .minimum)
+        XCTAssertNil(edge(slack, allowing: true))
+        XCTAssertEqual(edge(slack.offsetBy(dx: -300, dy: 0), allowing: true), .minimum)
+    }
+
     func testHorizontalPlaneClampedOverflowPreservesNeighborAndOpenEdgeVisibility() throws {
         let scenarios: [(neighborX: CGFloat, liveOffset: CGFloat, side: HideSide)] = [
             (1_000, -2_000, .right),

@@ -65,7 +65,8 @@ extension NiriLayoutEngine {
             context: context,
             viewport: NiriLayoutViewport(
                 area: context.area, orientation: context.orientation, workspaceOffset: 0,
-                viewPositions: viewPositions, revealMargin: revealMargin
+                viewPositions: viewPositions, revealMargin: revealMargin,
+                partialAcrossDisplays: partialColumnsAcrossDisplays
             ),
             activeIndex: activeIndex,
             viewPosition: viewPosition,

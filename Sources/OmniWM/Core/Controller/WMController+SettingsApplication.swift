@@ -149,7 +149,8 @@ extension WMController {
             singleWindowFit: settings.niri.singleWindowFit,
             edgeOverscroll: settings.niri.edgeOverscroll,
             containerPrimarySpanPresets: settings.niri.containerPrimarySpanPresets,
-            defaultContainerPrimarySpan: settings.niri.defaultContainerPrimarySpan
+            defaultContainerPrimarySpan: settings.niri.defaultContainerPrimarySpan,
+            partialColumnsAcrossDisplays: settings.niri.partialColumnsAcrossDisplays
         )
 
         if dwindleEngine == nil {

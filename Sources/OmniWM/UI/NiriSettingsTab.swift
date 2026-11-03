@@ -109,6 +109,15 @@ private struct GlobalNiriSettingsSection: View {
                     controller.updateNiriConfig(alwaysCenterSingleColumn: newValue)
                 }
 
+            Toggle("Show Partial Columns Across Displays", isOn: Bindable(settings.niri).partialColumnsAcrossDisplays)
+                .id("Show Partial Columns Across Displays")
+                .help(
+                    "A column that runs less than halfway onto another display stays visible instead of hiding. Needs \"Displays have separate Spaces\" on, which shows a window only on the display holding most of it."
+                )
+                .onChange(of: settings.niri.partialColumnsAcrossDisplays) { _, newValue in
+                    controller.updateNiriConfig(partialColumnsAcrossDisplays: newValue)
+                }
+
             Toggle("Allow Overscroll", isOn: Bindable(settings.niri).allowOverscroll)
                 .id("Allow Overscroll")
                 .onChange(of: settings.niri.allowOverscroll) { _, _ in

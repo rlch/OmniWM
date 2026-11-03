@@ -1,6 +1,12 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Show Partial Columns Across Displays" : {
+
+    },
+    "A column that runs less than halfway onto another display stays visible instead of hiding. Needs \"Displays have separate Spaces\" on, which shows a window only on the display holding most of it." : {
+
+    },
     "Could Not Install Update" : {
 
     },

@@ -58,6 +58,10 @@ final class NiriSettings {
         didSet { onChange?() }
     }
 
+    var partialColumnsAcrossDisplays = NiriSettings.defaults.partialColumnsAcrossDisplays ?? false {
+        didSet { onChange?() }
+    }
+
     var singleWindowFit = NiriSettings.defaults.singleWindowFit {
         didSet { onChange?() }
     }
@@ -110,7 +114,8 @@ final class NiriSettings {
             resizeStepPercent: resizeStepPercent,
             moveWindowStacksIntoColumn: moveWindowStacksIntoColumn,
             allowOverscroll: allowOverscroll,
-            overscrollVisibleStripPercent: overscrollVisibleStripPercent
+            overscrollVisibleStripPercent: overscrollVisibleStripPercent,
+            partialColumnsAcrossDisplays: partialColumnsAcrossDisplays
         )
     }
 
@@ -121,6 +126,8 @@ final class NiriSettings {
         alwaysCenterSingleColumn = niri.alwaysCenterSingleColumn
         singleWindowFit = niri.singleWindowFit
         allowOverscroll = niri.allowOverscroll ?? baseline.allowOverscroll ?? false
+        partialColumnsAcrossDisplays = niri.partialColumnsAcrossDisplays
+            ?? baseline.partialColumnsAcrossDisplays ?? false
         overscrollVisibleStripPercent = niri.overscrollVisibleStripPercent
             ?? baseline.overscrollVisibleStripPercent ?? 5
         edgeGaps = niri.edgeGaps ?? baseline.edgeGaps ?? true

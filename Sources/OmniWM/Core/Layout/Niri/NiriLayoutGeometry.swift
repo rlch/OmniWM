@@ -70,19 +70,23 @@ struct NiriLayoutViewport {
     private let workspaceOffset: CGFloat
     private let viewPositions: [CGFloat]
     private let revealMargin: CGFloat
+    /// A column running less than half onto a neighbouring display stays visible, clipped by macOS.
+    private let partialAcrossDisplays: Bool
 
     init(
         area: WorkingAreaContext,
         orientation: Monitor.Orientation,
         workspaceOffset: CGFloat,
         viewPositions: [CGFloat],
-        revealMargin: CGFloat
+        revealMargin: CGFloat,
+        partialAcrossDisplays: Bool = false
     ) {
         self.area = area
         self.orientation = orientation
         self.workspaceOffset = workspaceOffset
         self.viewPositions = viewPositions
         self.revealMargin = revealMargin
+        self.partialAcrossDisplays = partialAcrossDisplays
     }
 
     func columnVisibility(
@@ -123,7 +127,8 @@ struct NiriLayoutViewport {
                 viewportFrame: area.workingFrame,
                 orientation: orientation,
                 hiddenPlacementMonitor: hiddenPlacementMonitor,
-                hiddenPlacementMonitors: hiddenPlacementMonitors
+                hiddenPlacementMonitors: hiddenPlacementMonitors,
+                allowingMinority: partialAcrossDisplays
             ) {
                 visibilityState = .hidden(liveOverflowEdge)
             }
@@ -193,7 +198,8 @@ struct NiriLayoutViewport {
             viewportFrame: area.workingFrame,
             orientation: orientation,
             hiddenPlacementMonitor: hiddenPlacementMonitor,
-            hiddenPlacementMonitors: hiddenPlacementMonitors
+            hiddenPlacementMonitors: hiddenPlacementMonitors,
+            allowingMinority: partialAcrossDisplays
         ) {
             return .hidden(overflowEdge)
         }

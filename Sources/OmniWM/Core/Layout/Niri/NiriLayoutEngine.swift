@@ -35,6 +35,9 @@ final class NiriLayoutEngine {
 
     var alwaysCenterSingleColumn: Bool = false
 
+    /// A column running less than half onto a neighbouring display stays visible, for macOS to clip.
+    var partialColumnsAcrossDisplays = false
+
     var singleWindowFit: SingleWindowFit = .fullScreen
 
     var edgeOverscroll: NiriEdgeOverscroll = .disabled
@@ -254,9 +257,13 @@ final class NiriLayoutEngine {
         singleWindowFit: SingleWindowFit? = nil,
         edgeOverscroll: NiriEdgeOverscroll? = nil,
         presetContainerPrimarySpans: [PresetSize]? = nil,
-        defaultContainerPrimarySpan: CGFloat?? = nil
+        defaultContainerPrimarySpan: CGFloat?? = nil,
+        partialColumnsAcrossDisplays: Bool? = nil
     ) {
         assertSanctionedMutation()
+        if let partialColumnsAcrossDisplays {
+            self.partialColumnsAcrossDisplays = partialColumnsAcrossDisplays
+        }
         if let max = visibleContainerCount {
             self.visibleContainerCount = max.clamped(to: 1 ... 5)
         }

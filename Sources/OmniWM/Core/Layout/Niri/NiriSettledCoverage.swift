@@ -28,18 +28,31 @@ enum NiriMonitorPlaneGeometry {
         return clampedFrame
     }
 
+    /// The side on which `renderedRect` runs onto another display: a window there would draw on it.
+    /// With `allowingMinority`, a side whose overflow is less than half the rect is let through: with
+    /// "Displays have separate Spaces" on, macOS draws a window only on the display holding most of
+    /// it, so that part is clipped (`niri.partialColumnsAcrossDisplays`).
     static func overflowEdgeIntersectingNeighboringMonitor(
         _ renderedRect: CGRect,
         viewportFrame: CGRect,
         orientation: Monitor.Orientation,
         hiddenPlacementMonitor: HiddenPlacementMonitorContext?,
-        hiddenPlacementMonitors: [HiddenPlacementMonitorContext]
+        hiddenPlacementMonitors: [HiddenPlacementMonitorContext],
+        allowingMinority: Bool = false
     ) -> AxisHideEdge? {
-        let (minimumOverflow, maximumOverflow) = overflowRects(
+        var (minimumOverflow, maximumOverflow) = overflowRects(
             of: renderedRect,
             beyond: viewportFrame,
             orientation: orientation
         )
+        if allowingMinority {
+            let span = orientation == .horizontal ? renderedRect.width : renderedRect.height
+            let isMinority = { (overflow: CGRect) in
+                (orientation == .horizontal ? overflow.width : overflow.height) * 2 < span
+            }
+            if let overflow = minimumOverflow, isMinority(overflow) { minimumOverflow = nil }
+            if let overflow = maximumOverflow, isMinority(overflow) { maximumOverflow = nil }
+        }
 
         if let minimumOverflow {
             for otherMonitor in hiddenPlacementMonitors where !ownsViewport(
