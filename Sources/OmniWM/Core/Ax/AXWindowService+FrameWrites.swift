@@ -28,19 +28,38 @@ extension AXWindowService {
         return .sizeThenPosition
     }
 
-    /// Where to put a window before it grows past its screen's trailing edge, or nil when it need not
-    /// move first: AX grows a window whose trailing edge is on screen only as far as that edge, and one
-    /// whose edge is already past it as far as asked. The window keeps its size and row, and 40 points
-    /// on screen, which AX keeps of any window it moves.
+    /// Where to put a window before it grows past its screen's trailing or bottom edge, or nil when it
+    /// need not move first: AX grows a window whose trailing or bottom edge is on screen only as far as
+    /// that edge, and one whose edge is already past it as far as asked. The window keeps its size, and
+    /// 40 points on screen on the axis it is staged on, which AX keeps of any window it moves.
     static func overflowStaging(currentFrame: CGRect?, targetFrame: CGRect, screens: [CGRect]) -> CGRect? {
         guard let currentFrame,
-              targetFrame.width > currentFrame.width + 0.5,
               let screen = screens.first(where: { $0.contains(CGPoint(x: targetFrame.minX, y: targetFrame.midY)) })
-              ?? screens.first(where: { $0.intersects(targetFrame) }),
-              targetFrame.maxX > screen.maxX + 0.5,
-              currentFrame.maxX <= screen.maxX + 0.5
+              ?? screens.first(where: { $0.intersects(targetFrame) })
         else { return nil }
-        return CGRect(origin: CGPoint(x: screen.maxX - 40, y: currentFrame.minY), size: currentFrame.size)
+        // A growing window is moved before it is sized: its edges then are where the move puts them.
+        let moved = CGRect(
+            x: targetFrame.minX, y: targetFrame.maxY - currentFrame.height,
+            width: currentFrame.width, height: currentFrame.height
+        )
+        var origin = currentFrame.origin
+        var staged = false
+        if targetFrame.width > currentFrame.width + 0.5,
+           targetFrame.maxX > screen.maxX + 0.5,
+           moved.maxX <= screen.maxX + 0.5
+        {
+            origin.x = screen.maxX - 40
+            staged = true
+        }
+        // AppKit's y runs up: the bottom edge is minY.
+        if targetFrame.height > currentFrame.height + 0.5,
+           targetFrame.minY < screen.minY - 0.5,
+           moved.minY >= screen.minY - 0.5
+        {
+            origin.y = screen.minY + 40 - currentFrame.height
+            staged = true
+        }
+        return staged ? CGRect(origin: origin, size: currentFrame.size) : nil
     }
 
     private static func stagingPosition(currentFrame: CGRect?, targetFrame: CGRect) -> AXValue? {
@@ -198,7 +217,8 @@ extension AXWindowService {
             return error
         }
 
-        // Past the screen's trailing edge first, so the size is not clamped to it; then the size, then the place.
+        // Past the screen's trailing or bottom edge first, so the size is not clamped to it; then the size,
+        // then the place.
         if let staging {
             _ = AXUIElementSetAttributeValue(window.element, kAXPositionAttribute as CFString, staging)
         }

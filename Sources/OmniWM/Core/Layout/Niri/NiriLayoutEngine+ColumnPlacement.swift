@@ -35,7 +35,18 @@ extension NiriLayoutEngine {
             container: single.container,
             windows: [single.window],
             placement: placement,
-            context: NiriContainerLayoutContext(frames: context.frames, secondaryGap: 0, time: time),
+            context: NiriContainerLayoutContext(
+                frames: context.frames,
+                secondaryGap: 0,
+                time: time,
+                edgeOutset: NiriEdgeOutset(
+                    points: edgeOutset,
+                    workingFrame: layoutArea.workingFrame,
+                    primaryGap: context.primaryGap,
+                    secondaryGap: 0,
+                    orientation: orientation
+                )
+            ),
             result: &result.frames
         )
     }

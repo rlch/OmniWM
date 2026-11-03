@@ -17,12 +17,41 @@ final class AXOverflowStagingTests: XCTestCase {
         )
     }
 
+    func testAWindowGrowingPastTheScreensBottomMovesItsBottomEdgeOffFirst() {
+        // The edge outset: 1 pt past the bottom (AppKit y 0) and the right.
+        let current = CGRect(x: 512, y: 0, width: 512, height: 736)
+        let target = CGRect(x: 512, y: -1, width: 513, height: 737)
+        XCTAssertEqual(
+            AXWindowService.overflowStaging(currentFrame: current, targetFrame: target, screens: [screen]),
+            CGRect(x: 984, y: 40 - 736, width: 512, height: 736)
+        )
+        // Only the bottom.
+        XCTAssertEqual(
+            AXWindowService.overflowStaging(
+                currentFrame: CGRect(x: 0, y: 0, width: 500, height: 736),
+                targetFrame: CGRect(x: 0, y: -1, width: 500, height: 737),
+                screens: [screen]
+            ),
+            CGRect(x: 0, y: 40 - 736, width: 500, height: 736)
+        )
+    }
+
+    func testAnEdgePastTheScreenThatTheMoveBringsBackIsStagedToo() {
+        // The right column becomes the only one: it moves to x -1 first, which brings its right edge on screen.
+        let current = CGRect(x: 512, y: -1, width: 513, height: 737)
+        let target = CGRect(x: -1, y: -1, width: 1026, height: 738)
+        XCTAssertEqual(
+            AXWindowService.overflowStaging(currentFrame: current, targetFrame: target, screens: [screen]),
+            CGRect(x: 984, y: 40 - 737, width: 513, height: 737)
+        )
+    }
+
     func testNoStagingWhenTheEdgeIsAlreadyOffOrTheWindowFitsOrShrinks() {
         let screens = [screen]
         let wide = CGRect(x: 0, y: 10, width: 4000, height: 700)
-        // Already past the edge: AX grows it as asked.
+        // Past the edge, and still past it where the move puts it: AX grows it as asked.
         XCTAssertNil(AXWindowService.overflowStaging(
-            currentFrame: CGRect(x: 517, y: 10, width: 1024, height: 700), targetFrame: wide, screens: screens
+            currentFrame: CGRect(x: 517, y: 10, width: 1100, height: 700), targetFrame: wide, screens: screens
         ))
         // Fits its screen.
         XCTAssertNil(AXWindowService.overflowStaging(
