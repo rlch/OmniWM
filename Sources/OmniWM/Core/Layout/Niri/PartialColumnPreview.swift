@@ -56,7 +56,7 @@ final class PartialColumnPreviewController {
     private func makePanel(for token: WindowToken) -> PartialColumnPreviewPanel {
         let panel = PartialColumnPreviewPanel(onClick: { [system] in system.focus(token) })
         guard let handle = system.handle(token) else { return panel }
-        panel.startStream = { [system, weak panel] size in
+        panel.startStream = { [system, weak panel] size, generation in
             guard let window = await system.window(token), let panel else { return }
             let scale = system.scale(panel.frame)
             let request = OverviewPreviewRequest(
@@ -64,7 +64,7 @@ final class PartialColumnPreviewController {
                 pixelWidth: Int((size.width * scale).rounded()),
                 pixelHeight: Int((size.height * scale).rounded())
             )
-            await panel.attach(window: window, request: request)
+            await panel.attach(window: window, request: request, generation: generation)
         }
         return panel
     }
@@ -81,8 +81,11 @@ final class PartialColumnPreviewPanel: NSPanel {
     private var frameShown: OverviewPreviewFrame?
     private var streamedSize: CGSize?
     private var startTask: Task<Void, Never>?
+    /// Bumped as a stream is stopped: a start begun before it attaches nothing. (A task's own
+    /// `isCancelled` needs a runtime symbol macOS 26 lacks.)
+    private var generation = 0
     private var destroyed = false
-    var startStream: (@MainActor (CGSize) async -> Void)?
+    var startStream: (@MainActor (CGSize, Int) async -> Void)?
 
     init(onClick: @escaping @MainActor () -> Void) {
         self.onClick = onClick
@@ -130,11 +133,12 @@ final class PartialColumnPreviewPanel: NSPanel {
         guard streamedSize != next.frame.size, let startStream else { return }
         streamedSize = next.frame.size
         stopStream()
-        startTask = Task { await startStream(next.frame.size) }
+        let started = generation
+        startTask = Task { await startStream(next.frame.size, started) }
     }
 
-    func attach(window: SCWindow, request: OverviewPreviewRequest) async {
-        guard !destroyed, startTask?.isCancelled != true else { return }
+    func attach(window: SCWindow, request: OverviewPreviewRequest, generation started: Int) async {
+        guard !destroyed, started == generation else { return }
         let output = OverviewPreviewStream(
             onReady: { [weak self] in DispatchQueue.main.async { MainActor.assumeIsolated { self?.takeFrame() } } },
             onFailure: { [weak self] in DispatchQueue.main.async { MainActor.assumeIsolated { self?.stopStream() } } }
@@ -179,6 +183,7 @@ final class PartialColumnPreviewPanel: NSPanel {
     }
 
     private func stopStream() {
+        generation += 1
         startTask?.cancel()
         startTask = nil
         output?.invalidate()
