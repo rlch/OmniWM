@@ -417,13 +417,51 @@ final class NiriScrollVisibilityTests: XCTestCase {
         let strip = try XCTUnwrap(fixture.engine.partialStrips[fixture.workspaceId]?[fixture.tokens[0]])
         XCTAssertEqual(strip.frame, CGRect(x: -200, y: 0, width: 1_000, height: 800))
         XCTAssertEqual(strip.strip, CGRect(x: 0, y: 0, width: 800, height: 800))
-        // Off, or the column back in view: none.
+        // Noted with the setting off too, so the preview can say why it shows none.
         fixture.engine.partialColumnPreview = false
         _ = horizontalNeighborLayout(fixture, liveOffset: 200)
-        XCTAssertNil(fixture.engine.partialStrips[fixture.workspaceId])
-        fixture.engine.partialColumnPreview = true
+        XCTAssertNotNil(fixture.engine.partialStrips[fixture.workspaceId]?[fixture.tokens[0]])
+        // The column back in view: none.
         _ = horizontalNeighborLayout(fixture, liveOffset: 0)
         XCTAssertNil(fixture.engine.partialStrips[fixture.workspaceId]?[fixture.tokens[0]])
+    }
+
+    func testEachWindowOfAStackedColumnHiddenAtANeighborLeavesItsOwnStrip() throws {
+        let fixture = makeHorizontalNeighborFixture(neighborX: -1_000)
+        let stacked = WindowToken(pid: 1, windowId: 103)
+        let window = fixture.engine.addWindow(token: stacked, to: fixture.workspaceId, afterSelection: nil)
+        let column = try XCTUnwrap(fixture.engine.columns(in: fixture.workspaceId).first)
+        var state = ViewportState()
+        _ = fixture.engine.consumeWindow(
+            window,
+            into: column,
+            enteringFrom: .right,
+            context: .init(
+                workspaceId: fixture.workspaceId,
+                motion: .disabled,
+                workingFrame: fixture.area.workingFrame,
+                gaps: 0,
+                orientation: .horizontal
+            ),
+            state: &state
+        )
+        for container in fixture.engine.columns(in: fixture.workspaceId) {
+            container.cachedWidth = 1_000
+        }
+        XCTAssertEqual(column.windowNodes.count, 2)
+        _ = horizontalNeighborLayout(fixture, liveOffset: 200)
+        let strips = try XCTUnwrap(fixture.engine.partialStrips[fixture.workspaceId])
+        let tokens = column.windowNodes.map(\.token)
+        XCTAssertEqual(Set(strips.keys), Set(tokens))
+        for token in tokens {
+            let strip = try XCTUnwrap(strips[token])
+            XCTAssertEqual(strip.strip.minX, 0)
+            XCTAssertEqual(strip.strip.width, 800)
+            XCTAssertEqual(strip.frame.minX, -200)
+        }
+        // One above the other: the two strips split the column's height.
+        let heights = tokens.compactMap { strips[$0]?.strip.height }
+        XCTAssertEqual(heights.reduce(0, +), 800, accuracy: 1)
     }
 
     func testTheMinorityRuleCountsEachSideAgainstTheWholeRect() {

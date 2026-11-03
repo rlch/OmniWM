@@ -2,6 +2,7 @@
 // Copyright (C) 2026 OmniNull — https://github.com/OmniNull/OmniWM
 
 import CoreGraphics
+import CoreVideo
 import Foundation
 @testable import OmniWM
 import XCTest
@@ -37,30 +38,63 @@ final class PartialColumnPreviewTests: XCTestCase {
 
     func testAPanelPerStripStaysThroughMotionAndGoesOnceItsColumnIsBackInView() {
         let previews = controller()
-        previews.update(workspaceId: workspace, strips: [slack: strip, firefox: strip], active: true, settled: true)
+        // Mid-animation: no panel made yet.
+        previews.update(workspaceId: workspace, strips: [slack: strip], shown: true, enabled: true, settled: false)
+        XCTAssertEqual(previews.shownTokens, [])
+        previews.update(
+            workspaceId: workspace,
+            strips: [slack: strip, firefox: strip],
+            shown: true,
+            enabled: true,
+            settled: true
+        )
         XCTAssertEqual(previews.shownTokens, [slack, firefox])
         // Moving: a strip missing from a frame of the motion keeps its panel and stream.
-        previews.update(workspaceId: workspace, strips: [slack: strip], active: true, settled: false)
+        previews.update(workspaceId: workspace, strips: [slack: strip], shown: true, enabled: true, settled: false)
         XCTAssertEqual(previews.shownTokens, [slack, firefox])
         // Settled with Firefox's column back in view: its panel goes.
-        previews.update(workspaceId: workspace, strips: [slack: strip], active: true, settled: true)
+        previews.update(workspaceId: workspace, strips: [slack: strip], shown: true, enabled: true, settled: true)
         XCTAssertEqual(previews.shownTokens, [slack])
         // Another workspace's update leaves this one's alone.
-        previews.update(workspaceId: WorkspaceDescriptor.ID(), strips: [:], active: true, settled: true)
+        previews.update(workspaceId: WorkspaceDescriptor.ID(), strips: [:], shown: true, enabled: true, settled: true)
         XCTAssertEqual(previews.shownTokens, [slack])
     }
 
     func testTheWorkspaceNotShownOrTheSettingOffTakesItsPanels() {
         let previews = controller()
-        previews.update(workspaceId: workspace, strips: [slack: strip], active: true, settled: true)
-        previews.update(workspaceId: workspace, strips: [slack: strip], active: false, settled: false)
+        previews.update(workspaceId: workspace, strips: [slack: strip], shown: true, enabled: true, settled: true)
+        previews.update(workspaceId: workspace, strips: [slack: strip], shown: false, enabled: true, settled: false)
+        XCTAssertEqual(previews.shownTokens, [])
+        previews.update(workspaceId: workspace, strips: [slack: strip], shown: true, enabled: true, settled: true)
+        previews.update(workspaceId: workspace, strips: [slack: strip], shown: true, enabled: false, settled: true)
         XCTAssertEqual(previews.shownTokens, [])
     }
 
     func testWithoutScreenRecordingThereIsNoPanel() {
         let previews = controller(allowed: false)
-        previews.update(workspaceId: workspace, strips: [slack: strip], active: true, settled: true)
+        previews.update(workspaceId: workspace, strips: [slack: strip], shown: true, enabled: true, settled: true)
         XCTAssertEqual(previews.shownTokens, [])
+    }
+
+    func testTheLastFrameOfTheLatestWindowsIsKept() throws {
+        var buffer: CVPixelBuffer?
+        CVPixelBufferCreate(
+            nil, 4, 4, kCVPixelFormatType_32BGRA,
+            [kCVPixelBufferIOSurfacePropertiesKey: [:]] as CFDictionary, &buffer
+        )
+        let frame = try XCTUnwrap(OverviewPreviewFrame(pixelBuffer: try XCTUnwrap(buffer)))
+        let previews = controller()
+        let tokens = (0 ... PartialColumnPreviewController.framesKept).map { WindowToken(pid: 9, windowId: 900 + $0) }
+        for token in tokens {
+            previews.keep(frame, for: token)
+        }
+        XCTAssertEqual(previews.keptFrames.count, PartialColumnPreviewController.framesKept)
+        XCTAssertFalse(previews.keptFrames.contains(tokens[0]))
+        // Kept again, a window is the latest: the next one in drops another.
+        previews.keep(frame, for: tokens[1])
+        previews.keep(frame, for: WindowToken(pid: 9, windowId: 999))
+        XCTAssertTrue(previews.keptFrames.contains(tokens[1]))
+        XCTAssertFalse(previews.keptFrames.contains(tokens[2]))
     }
 
     func testTheSettingIsOffByDefaultOptionalAndRoundTrips() throws {

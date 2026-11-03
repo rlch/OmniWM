@@ -143,6 +143,15 @@ extension NiriLayoutEngine {
             ),
             result: &result.frames
         )
+        if case .hidden = visibility.state {
+            notePartialStrips(
+                column,
+                parkedAt: renderedRect,
+                wouldBe: visibility.visibleRect,
+                pass: pass,
+                frames: result.frames
+            )
+        }
     }
 
     private func renderedColumnFrame(
@@ -187,7 +196,6 @@ extension NiriLayoutEngine {
             for index in windowSpan.indices {
                 result.hiddenHandles[windowSpan[index].token] = hiddenEdge.encodedHideSide
             }
-            notePartialStrip(projectedColumn, rect: visibilityRect, area: layoutArea.workingFrame, pass: pass)
             renderedContainerRect = layoutArea.hiddenRenderedContainerRect(
                 canonicalRect: visibility.canonicalRect,
                 edge: hiddenEdge,

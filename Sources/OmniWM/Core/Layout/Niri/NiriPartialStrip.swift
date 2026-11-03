@@ -22,22 +22,35 @@ struct NiriPartialStrip: Equatable {
 }
 
 extension NiriLayoutEngine {
-    /// Notes the strip a hidden column would take on its own display: one window shown, alone or the
-    /// active tab; a column of stacked windows has no single view.
-    func notePartialStrip(
+    /// Notes the strip each window of a hidden column would take on its own display: every window of
+    /// a column of stacked windows, the active one of a tabbed column. Its frame where it would be is
+    /// its frame parked, moved back by as much as the column was. Noted whatever the setting says, so
+    /// that an empty strip can say why (`PartialColumnPreviewController`).
+    func notePartialStrips(
         _ projectedColumn: NiriProjectedColumn,
-        rect: CGRect,
-        area: CGRect,
-        pass: NiriColumnLayoutPass
+        parkedAt parked: CGRect,
+        wouldBe rect: CGRect,
+        pass: NiriColumnLayoutPass,
+        frames: [WindowToken: CGRect]
     ) {
-        guard partialColumnPreview, let workspaceId = pass.workspaceId,
-              projectedColumn.windows.count == 1 || projectedColumn.column.isTabbed,
-              let window = projectedActiveWindow(in: projectedColumn),
-              window.sizingMode == .normal
+        let area = pass.context.area.workingFrame
+        // The focused column is the operator's to move: no stand-in for it.
+        guard let workspaceId = pass.workspaceId, !rect.intersection(area).isNull,
+              !projectedColumn.windows.contains(where: { $0.id == pass.selectedNodeId })
         else { return }
-        let strip = rect.intersection(area)
-        guard !strip.isNull, strip.width >= 1, strip.height >= 1 else { return }
-        partialStrips[workspaceId, default: [:]][window.token] = NiriPartialStrip(frame: rect, strip: strip)
+        let windows: [NiriWindow] = if projectedColumn.column.isTabbed, projectedColumn.windows.count > 1 {
+            projectedActiveWindow(in: projectedColumn).map { [$0] } ?? []
+        } else {
+            Array(projectedColumn.windows)
+        }
+        let dx = rect.minX - parked.minX
+        let dy = rect.minY - parked.minY
+        for window in windows where window.sizingMode == .normal {
+            guard let frame = frames[window.token]?.offsetBy(dx: dx, dy: dy) else { continue }
+            let strip = frame.intersection(area)
+            guard !strip.isNull, strip.width >= 1, strip.height >= 1 else { continue }
+            partialStrips[workspaceId, default: [:]][window.token] = NiriPartialStrip(frame: frame, strip: strip)
+        }
     }
 }
 
