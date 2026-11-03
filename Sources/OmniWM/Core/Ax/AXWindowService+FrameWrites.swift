@@ -28,6 +28,29 @@ extension AXWindowService {
         return .sizeThenPosition
     }
 
+    /// Where to put a window before it grows past its screen's trailing edge, or nil when it need not
+    /// move first: AX grows a window whose trailing edge is on screen only as far as that edge, and one
+    /// whose edge is already past it as far as asked. The window keeps its size and row, and 40 points
+    /// on screen, which AX keeps of any window it moves.
+    static func overflowStaging(currentFrame: CGRect?, targetFrame: CGRect, screens: [CGRect]) -> CGRect? {
+        guard let currentFrame,
+              targetFrame.width > currentFrame.width + 0.5,
+              let screen = screens.first(where: { $0.contains(CGPoint(x: targetFrame.minX, y: targetFrame.midY)) })
+              ?? screens.first(where: { $0.intersects(targetFrame) }),
+              targetFrame.maxX > screen.maxX + 0.5,
+              currentFrame.maxX <= screen.maxX + 0.5
+        else { return nil }
+        return CGRect(origin: CGPoint(x: screen.maxX - 40, y: currentFrame.minY), size: currentFrame.size)
+    }
+
+    private static func stagingPosition(currentFrame: CGRect?, targetFrame: CGRect) -> AXValue? {
+        let screens = NSScreen.screens.map(\.frame)
+        guard let rect = overflowStaging(currentFrame: currentFrame, targetFrame: targetFrame, screens: screens)
+        else { return nil }
+        var origin = convertToAX(rect).origin
+        return AXValueCreate(.cgPoint, &origin)
+    }
+
     static func setFrame(
         _ window: AXWindowRef,
         frame: CGRect,
@@ -62,6 +85,7 @@ extension AXWindowService {
         let writeOrder = components == .all
             ? frameWriteOrder(currentFrame: currentFrame, targetFrame: frame)
             : .sizeThenPosition
+        let staging = components == .all ? stagingPosition(currentFrame: currentFrame, targetFrame: frame) : nil
         let axFrame = convertToAX(frame)
         var position = CGPoint(x: axFrame.origin.x, y: axFrame.origin.y)
         var size = CGSize(width: axFrame.size.width, height: axFrame.size.height)
@@ -79,7 +103,7 @@ extension AXWindowService {
         }
 
         let (sizeError, positionError) = setFrameAttributes(
-            window, values: (sizeValue, positionValue), order: writeOrder, timing: timing
+            window, values: (sizeValue, positionValue), order: writeOrder, staging: staging, timing: timing
         )
 
         let verificationStart = timing == nil ? 0 : DispatchTime.now().uptimeNanoseconds
@@ -144,6 +168,7 @@ extension AXWindowService {
         _ window: AXWindowRef,
         values: (size: AXValue?, position: AXValue?),
         order: AXFrameWriteOrder,
+        staging: AXValue?,
         timing: UnsafeMutablePointer<AXFrameSetterTiming>?
     ) -> (AXError, AXError) {
         var positionError: AXError = .success
@@ -173,7 +198,11 @@ extension AXWindowService {
             return error
         }
 
-        switch order {
+        // Past the screen's trailing edge first, so the size is not clamped to it; then the size, then the place.
+        if let staging {
+            _ = AXUIElementSetAttributeValue(window.element, kAXPositionAttribute as CFString, staging)
+        }
+        switch staging == nil ? order : .sizeThenPosition {
         case .sizeThenPosition:
             sizeError = setSize()
             positionError = setPosition()
