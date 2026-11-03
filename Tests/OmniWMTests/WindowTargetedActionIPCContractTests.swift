@@ -40,7 +40,8 @@ final class WindowTargetedActionIPCContractTests: XCTestCase {
             ),
             (["toggle-column-tabbed"], .init(name: .toggleColumnTabbed, windowId: "ow_x")),
             (["toggle-floating"], .init(name: .toggleFloating, windowId: "ow_x")),
-            (["assign-to-scratchpad", "2"], .init(name: .assignToScratchpad, windowId: "ow_x", scratchpadIndex: 2))
+            (["assign-to-scratchpad", "2"], .init(name: .assignToScratchpad, windowId: "ow_x", scratchpadIndex: 2)),
+            (["reveal", "1200", "800.5"], .init(name: .reveal, windowId: "ow_x", offset: 1200, span: 800.5))
         ]
     }
 
@@ -69,7 +70,7 @@ final class WindowTargetedActionIPCContractTests: XCTestCase {
             ["change": ["kind": "set-proportion", "value": 50]],
             ["change": ["kind": "adjust-fixed", "value": 10]], ["cycle": "forward"],
             ["change": ["kind": "set-proportion", "value": 50]], [:], ["cycle": "backward"], [:], [:],
-            ["scratchpadIndex": 2]
+            ["scratchpadIndex": 2], ["offset": 1200, "span": 800.5]
         ]
         let cases = try parseCases()
         XCTAssertEqual(cases.count, extras.count)
@@ -109,7 +110,9 @@ final class WindowTargetedActionIPCContractTests: XCTestCase {
             #"{"name":"move-column","windowId":"ow_x"}"#,
             #"{"name":"set-window-primary-span","windowId":"ow_x"}"#,
             #"{"name":"cycle-window-secondary-span","windowId":"ow_x"}"#,
-            #"{"name":"assign-to-scratchpad","windowId":"ow_x"}"#
+            #"{"name":"assign-to-scratchpad","windowId":"ow_x"}"#,
+            #"{"name":"reveal","windowId":"ow_x","offset":0}"#,
+            #"{"name":"reveal","windowId":"ow_x","span":100}"#
         ]
         for payload in payloads {
             XCTAssertThrowsError(try JSONDecoder().decode(IPCWindowRequest.self, from: Data(payload.utf8)), payload)
@@ -124,7 +127,10 @@ final class WindowTargetedActionIPCContractTests: XCTestCase {
             #"{"name":"focus","windowId":"ow_x","direction":"left"}"#,
             #"{"name":"move-to-workspace","windowId":"ow_x","workspaceTarget":{"kind":"raw-id","value":"3"},"cycle":"forward"}"#,
             #"{"name":"move-column-to-index","windowId":"ow_x","columnIndex":0}"#,
-            #"{"name":"assign-to-scratchpad","windowId":"ow_x","scratchpadIndex":11}"#
+            #"{"name":"assign-to-scratchpad","windowId":"ow_x","scratchpadIndex":11}"#,
+            #"{"name":"reveal","windowId":"ow_x","offset":-1,"span":100}"#,
+            #"{"name":"reveal","windowId":"ow_x","offset":0,"span":0}"#,
+            #"{"name":"focus","windowId":"ow_x","offset":0}"#
         ]
         for payload in payloads {
             XCTAssertThrowsError(try JSONDecoder().decode(IPCWindowRequest.self, from: Data(payload.utf8)), payload)
@@ -143,7 +149,11 @@ final class WindowTargetedActionIPCContractTests: XCTestCase {
             ["window", "cycle-window-secondary-span", "ow_x"],
             ["window", "assign-to-scratchpad", "ow_x", "0"],
             ["window", "assign-to-scratchpad", "ow_x", "11"],
-            ["window", "toggle-floating"]
+            ["window", "toggle-floating"],
+            ["window", "reveal", "ow_x", "10"],
+            ["window", "reveal", "ow_x", "-5", "100"],
+            ["window", "reveal", "ow_x", "0", "0"],
+            ["window", "reveal", "ow_x", "0", "wide"]
         ]
         for invocation in invocations {
             XCTAssertThrowsError(try CLIParser.parse(arguments: ["omniwmctl"] + invocation), "\(invocation)") { error in

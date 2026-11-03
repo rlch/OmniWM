@@ -97,6 +97,18 @@ extension NiriLayoutHandler {
         }
     }
 
+    @discardableResult
+    func reveal(offset: CGFloat, span: CGFloat, target: WindowTarget) -> Bool {
+        var performed = false
+        withNiriWindowContext(target) { engine, windowNode, context, state in
+            guard engine.reveal(windowNode, offset: offset, span: span, context: context, state: &state) else { return }
+            requestLayoutCommandRelayout(in: context.workspaceId)
+            startScrollAnimationIfNeeded(for: context.workspaceId, state: state, engine: engine)
+            performed = true
+        }
+        return performed
+    }
+
     func centerVisibleColumns() {
         withNiriWorkspaceContext { engine, wsId, motion, state, _, workingFrame, gaps, orientation in
             guard engine.centerVisibleColumns(

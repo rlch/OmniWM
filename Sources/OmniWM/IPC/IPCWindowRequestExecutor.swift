@@ -75,6 +75,15 @@ struct IPCWindowRequestExecutor {
             return toggleFloating(token)
         case .assignToScratchpad:
             return assignToScratchpad(request, token: token)
+        case .reveal:
+            return reveal(request, token: token)
+        }
+    }
+
+    private func reveal(_ request: IPCWindowRequest, token: WindowToken) -> ExternalCommandResult {
+        guard let offset = request.offset, let span = request.span else { return .invalidArguments }
+        return performNiriWindowAction(token) {
+            $0.reveal(offset: CGFloat(offset), span: CGFloat(span), target: .window($1))
         }
     }
 

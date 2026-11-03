@@ -140,6 +140,12 @@ extension IPCAutomationManifest {
             name: .assignToScratchpad,
             summary: "Assign a managed window to a numbered scratchpad slot, or release it when already there, without changing focus.",
             arguments: ["opaque-id", "number"]
+        ),
+        .init(
+            path: "window reveal <opaque-id> <offset> <span>",
+            name: .reveal,
+            summary: "Keep span points of a managed window wider than the view, from offset points past its leading edge, in view without changing focus; cleared when the viewport is panned by hand or another column is focused (Niri only).",
+            arguments: ["opaque-id", "offset", "span"]
         )
     ]
 

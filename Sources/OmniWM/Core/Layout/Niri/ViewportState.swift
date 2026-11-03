@@ -15,6 +15,21 @@ struct OffsetTransition: Equatable {
     var kind: Kind?
 }
 
+/// A part of a window wider than the view to keep in view: `span` points from `offset`, measured
+/// from the window's leading edge. Every pan to the window's column narrows to that part, until the
+/// operator pans, focuses another column, or the column fits the view.
+struct ViewportReveal: Equatable {
+    var token: WindowToken
+    var offset: CGFloat
+    var span: CGFloat
+    /// Its column was focused and panned to: a later pan to another column clears it.
+    var shown = false
+
+    func asks(_ other: ViewportReveal) -> Bool {
+        token == other.token && offset == other.offset && span == other.span
+    }
+}
+
 struct ViewportState: Equatable {
     var activeColumnIndex: Int = 0
 
@@ -31,6 +46,8 @@ struct ViewportState: Equatable {
     var activatePrevColumnOnRemoval: CGFloat?
 
     var displayRefreshRate: Double = 60.0
+
+    var reveal: ViewportReveal?
 }
 
 extension ViewportState {

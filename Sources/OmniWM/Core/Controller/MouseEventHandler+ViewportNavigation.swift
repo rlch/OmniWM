@@ -32,6 +32,9 @@ extension MouseEventHandler {
                     vstate.jumpOffset(to: liveOffset)
                 }
             }
+            controller.workspaceManager.withNiriViewportState(for: wsId) { vstate in
+                vstate.reveal = nil
+            }
             if engine.effectiveSettings(in: wsId).edgeOverscroll != .disabled {
                 controller.workspaceManager.withNiriViewportState(for: wsId) { vstate in
                     vstate.preservesGestureOffset = true

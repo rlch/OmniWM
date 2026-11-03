@@ -29,6 +29,9 @@ extension ViewportState {
 
         let prevActiveColumn = activeColumnIndex
         activeColumnIndex = clampedIndex
+        if let reveal, !columns[clampedIndex].windowNodes.contains(where: { $0.token == reveal.token }) {
+            self.reveal = nil
+        }
 
         let newActivePosition = containerPosition(
             at: clampedIndex,
@@ -100,6 +103,14 @@ extension ViewportState {
     ) {
         preservesGestureOffset = false
         guard !containers.isEmpty, containerIndex >= 0, containerIndex < containers.count else { return }
+        if let reveal {
+            let here = containers[containerIndex].windowNodes.contains { $0.token == reveal.token }
+            if !revealHolds(containers: containers, context: context) || (reveal.shown && !here) {
+                self.reveal = nil
+            } else if here {
+                self.reveal?.shown = true
+            }
+        }
 
         let sizeKeyPath = context.orientation.settledSpanKeyPath
         let stationaryOffset = viewOffset

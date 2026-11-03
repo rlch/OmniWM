@@ -20,6 +20,7 @@ omniwmctl window set-window-secondary-span <opaque-id> <size-change>
 omniwmctl window cycle-window-primary-span <opaque-id> <forward|backward>
 omniwmctl window cycle-window-secondary-span <opaque-id> <forward|backward>
 omniwmctl window assign-to-scratchpad <opaque-id> <number>
+omniwmctl window reveal <opaque-id> <offset> <span>
 ```
 
 | Action | Description |
@@ -42,6 +43,7 @@ omniwmctl window assign-to-scratchpad <opaque-id> <number>
 | `cycle-window-secondary-span` | Cycle the window's secondary span preset `forward` or `backward`. Niri only |
 | `toggle-column-tabbed` | Toggle tabbed display for the window's column. Niri only |
 | `toggle-floating` | Toggle the window between tiled and floating. A floating window on a Niri workspace is re-tiled as a new column after the focused column, without taking focus |
+| `reveal` | Keep `span` points of a window wider than the view in view, starting `offset` points past its leading edge. The viewport pans to that part as it would to a column of that width, and every later layout keeps it there, until the viewport is panned by hand, another column is focused, the window goes, or its column fits the view. Kept, with no pan, while the window's column is not the focused one. Changes neither focus nor size; `no_change` when the column fits the view. Niri only |
 | `assign-to-scratchpad` | Assign the window to a numbered scratchpad slot (1-10); if it is already in that slot, remove it from the scratchpad and tile it again. A hidden member is released onto the active workspace of the window's monitor, as its own new column |
 
 The actions from `move-column-to-first` onward act on the given window or its column without changing focus or scrolling the viewport: the focused window keeps its on-screen position, except when the existing relayout clamps the view to the content edges (empty space would be exposed past the first or last column) or the workspace enters single-window layout. An action on a window in the focused window's own column behaves like the matching focused-column command for viewport purposes. `<size-change>` accepts fixed pixels (`100`), proportions (`50%`), fixed deltas (`+10`), or proportional deltas (`-10%`).

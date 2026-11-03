@@ -25,8 +25,16 @@ extension IPCJSONWriter {
         }
         self.key("name", &first)
         try self.value(value.name)
+        if let fieldValue = value.offset {
+            self.key("offset", &first)
+            try self.value(fieldValue)
+        }
         if let fieldValue = value.scratchpadIndex {
             self.key("scratchpadIndex", &first)
+            try self.value(fieldValue)
+        }
+        if let fieldValue = value.span {
+            self.key("span", &first)
             try self.value(fieldValue)
         }
         self.key("windowId", &first)

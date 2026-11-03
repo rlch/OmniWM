@@ -42,6 +42,56 @@ extension NiriLayoutEngine {
         } ?? false
     }
 
+    /// Keeps `span` points of `window` from `offset` in view, by panning the viewport, without
+    /// focusing it or changing its size; false when its column fits the view, or the same reveal holds.
+    @discardableResult
+    func reveal(
+        _ window: NiriWindow,
+        offset: CGFloat,
+        span: CGFloat,
+        context: NiriInteractionContext,
+        state: inout ViewportState
+    ) -> Bool {
+        assertSanctionedMutation()
+        let settings = effectiveSettings(in: context.workspaceId)
+        resolvePrimaryContainerSpans(
+            in: context.workspaceId,
+            workingFrame: context.workingFrame,
+            gaps: context.gaps,
+            orientation: context.orientation
+        )
+        guard let column = findColumn(containing: window, in: context.workspaceId) else { return false }
+        let reveal = ViewportReveal(token: window.token, offset: offset, span: span)
+        guard state.reveal.map({ !$0.asks(reveal) }) ?? true else { return false }
+        var proposed = state
+        proposed.reveal = reveal
+        guard proposed.revealHolds(containers: columns(in: context.workspaceId), context: context) else { return false }
+        state.reveal = reveal
+        let scale = displayScale(in: context.workspaceId)
+        let viewFrame = monitorForWorkspace(context.workspaceId)?.frame
+        _ = withProjectedViewport(
+            state: &state,
+            context: context
+        ) { columns, projectedState in
+            let activeIndex = projectedState.activeColumnIndex.clamped(to: 0 ... columns.count - 1)
+            // Kept for when its column has the focus; panning to it now would be undone at the next layout.
+            guard columns[activeIndex] === column else { return }
+            let singleOrigin = singleWindowGestureOrigin(context: context)
+            projectedState.rebaseOffset(by: singleOrigin)
+            defer { projectedState.rebaseOffset(by: -singleOrigin) }
+            projectedState.ensureContainerVisible(
+                containerIndex: activeIndex,
+                containers: columns,
+                context: context,
+                centerMode: settings.centerFocusedColumn,
+                alwaysCenterSingleColumn: settings.alwaysCenterSingleColumn,
+                scale: scale,
+                viewFrame: viewFrame
+            )
+        }
+        return true
+    }
+
     @discardableResult
     func centerVisibleColumns(context: NiriInteractionContext, state: inout ViewportState) -> Bool {
         assertSanctionedMutation()

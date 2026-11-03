@@ -23,6 +23,7 @@ public enum IPCWindowActionName: String, Codable, Equatable, Sendable {
     case toggleColumnTabbed = "toggle-column-tabbed"
     case toggleFloating = "toggle-floating"
     case assignToScratchpad = "assign-to-scratchpad"
+    case reveal
 }
 
 public enum IPCCycleDirection: String, Codable, CaseIterable, Equatable, Sendable {
@@ -39,6 +40,8 @@ public struct IPCWindowRequest: Codable, Equatable, Sendable {
     public let change: IPCSizeChange?
     public let cycle: IPCCycleDirection?
     public let scratchpadIndex: Int?
+    public let offset: Double?
+    public let span: Double?
 
     public init(
         name: IPCWindowActionName,
@@ -48,7 +51,9 @@ public struct IPCWindowRequest: Codable, Equatable, Sendable {
         direction: IPCDirection? = nil,
         change: IPCSizeChange? = nil,
         cycle: IPCCycleDirection? = nil,
-        scratchpadIndex: Int? = nil
+        scratchpadIndex: Int? = nil,
+        offset: Double? = nil,
+        span: Double? = nil
     ) {
         self.name = name
         self.windowId = windowId
@@ -58,6 +63,8 @@ public struct IPCWindowRequest: Codable, Equatable, Sendable {
         self.change = change
         self.cycle = cycle
         self.scratchpadIndex = scratchpadIndex
+        self.offset = offset
+        self.span = span
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -69,19 +76,22 @@ public struct IPCWindowRequest: Codable, Equatable, Sendable {
         case change
         case cycle
         case scratchpadIndex
+        case offset
+        case span
     }
 
-    private static func requiredArgumentKey(for name: IPCWindowActionName) -> CodingKeys? {
+    private static func requiredArgumentKeys(for name: IPCWindowActionName) -> Set<CodingKeys> {
         switch name {
-        case .moveToWorkspace: .workspaceTarget
-        case .moveColumnToIndex: .columnIndex
-        case .moveColumn: .direction
+        case .moveToWorkspace: [.workspaceTarget]
+        case .moveColumnToIndex: [.columnIndex]
+        case .moveColumn: [.direction]
         case .setContainerPrimarySpan,
              .setWindowPrimarySpan,
-             .setWindowSecondarySpan: .change
+             .setWindowSecondarySpan: [.change]
         case .cycleWindowPrimarySpan,
-             .cycleWindowSecondarySpan: .cycle
-        case .assignToScratchpad: .scratchpadIndex
+             .cycleWindowSecondarySpan: [.cycle]
+        case .assignToScratchpad: [.scratchpadIndex]
+        case .reveal: [.offset, .span]
         case .focus,
              .navigate,
              .summonRight,
@@ -92,7 +102,7 @@ public struct IPCWindowRequest: Codable, Equatable, Sendable {
              .resetWindowSecondarySpan,
              .toggleColumnTabbed,
              .toggleFloating:
-            nil
+            []
         }
     }
 
@@ -106,17 +116,21 @@ public struct IPCWindowRequest: Codable, Equatable, Sendable {
         change = try container.decodeIfPresent(IPCSizeChange.self, forKey: .change)
         cycle = try container.decodeIfPresent(IPCCycleDirection.self, forKey: .cycle)
         scratchpadIndex = try container.decodeIfPresent(Int.self, forKey: .scratchpadIndex)
+        offset = try container.decodeIfPresent(Double.self, forKey: .offset)
+        span = try container.decodeIfPresent(Double.self, forKey: .span)
 
-        let required = Self.requiredArgumentKey(for: name)
+        let required = Self.requiredArgumentKeys(for: name)
         let present: [CodingKeys: Bool] = [
             .workspaceTarget: workspaceTarget != nil,
             .columnIndex: columnIndex != nil,
             .direction: direction != nil,
             .change: change != nil,
             .cycle: cycle != nil,
-            .scratchpadIndex: scratchpadIndex != nil
+            .scratchpadIndex: scratchpadIndex != nil,
+            .offset: offset != nil,
+            .span: span != nil
         ]
-        for (key, isPresent) in present where isPresent != (key == required) {
+        for (key, isPresent) in present where isPresent != required.contains(key) {
             throw DecodingError.dataCorruptedError(
                 forKey: key,
                 in: container,
@@ -132,12 +146,31 @@ public struct IPCWindowRequest: Codable, Equatable, Sendable {
             )
         }
 
+        try Self.validateReveal(offset: offset, span: span, in: container)
+
         if let scratchpadIndex, !IPCScratchpadSlots.range.contains(scratchpadIndex) {
             throw DecodingError.dataCorruptedError(
                 forKey: .scratchpadIndex,
                 in: container,
                 debugDescription: "scratchpadIndex must be in \(IPCScratchpadSlots.range)"
             )
+        }
+    }
+
+    private static func validateReveal(
+        offset: Double?,
+        span: Double?,
+        in container: KeyedDecodingContainer<CodingKeys>
+    ) throws {
+        if let offset, !(offset.isFinite && offset >= 0) {
+            throw DecodingError.dataCorruptedError(
+                forKey: .offset,
+                in: container,
+                debugDescription: "offset must be >= 0"
+            )
+        }
+        if let span, !(span.isFinite && span > 0) {
+            throw DecodingError.dataCorruptedError(forKey: .span, in: container, debugDescription: "span must be > 0")
         }
     }
 
@@ -151,6 +184,8 @@ public struct IPCWindowRequest: Codable, Equatable, Sendable {
         try container.encodeIfPresent(change, forKey: .change)
         try container.encodeIfPresent(cycle, forKey: .cycle)
         try container.encodeIfPresent(scratchpadIndex, forKey: .scratchpadIndex)
+        try container.encodeIfPresent(offset, forKey: .offset)
+        try container.encodeIfPresent(span, forKey: .span)
     }
 }
 

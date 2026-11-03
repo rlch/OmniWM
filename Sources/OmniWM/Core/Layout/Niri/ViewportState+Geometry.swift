@@ -292,11 +292,18 @@ extension ViewportState {
             mode: containers[containerIndex].effectiveSizingMode
         )
 
+        guard let narrowed = revealedTarget(target, in: containers[containerIndex], areas: areas) else {
+            return areas.centeredOffset(
+                currentViewStart: target.position,
+                target: target,
+                gap: context.gaps
+            )
+        }
         return areas.centeredOffset(
-            currentViewStart: target.position,
-            target: target,
+            currentViewStart: narrowed.0.position,
+            target: narrowed.0,
             gap: context.gaps
-        )
+        ) + narrowed.1
     }
 
     func computeVisibleOffset(
@@ -350,10 +357,49 @@ extension ViewportState {
                 areas: areas
             )
         }
+        let (fitted, shift) = revealedTarget(target, in: containers[containerIndex], areas: areas) ?? (target, 0)
         if shouldCenter {
-            return areas.centeredOffset(currentViewStart: currentViewStart, target: target, gap: context.gaps)
+            return areas.centeredOffset(currentViewStart: currentViewStart, target: fitted, gap: context.gaps) + shift
         }
-        return areas.fitOffset(currentViewStart: currentViewStart, target: target, gap: context.gaps)
+        return areas.fitOffset(currentViewStart: currentViewStart, target: fitted, gap: context.gaps) + shift
+    }
+
+    /// `target` narrowed to the part `reveal` asks of a window in `column`, and how far that part
+    /// starts from the column's start; nil when there is no reveal there, or the column fits the view.
+    func revealedTarget(
+        _ target: ViewportColumnTarget,
+        in column: NiriContainer,
+        areas: ViewportFittingAreas
+    ) -> (ViewportColumnTarget, CGFloat)? {
+        guard let reveal,
+              target.mode == .normal,
+              target.span > areas.span(of: areas.working),
+              column.windowNodes.contains(where: { $0.token == reveal.token })
+        else { return nil }
+        let offset = reveal.offset.clamped(to: 0 ... max(0, target.span - 1))
+        let span = min(reveal.span, target.span - offset)
+        guard span > 0 else { return nil }
+        return (
+            ViewportColumnTarget(
+                index: target.index,
+                position: target.position + offset,
+                span: span,
+                mode: target.mode
+            ),
+            offset
+        )
+    }
+
+    /// Whether `reveal` still applies: its window is in one of `containers`, whose column is wider than the view.
+    func revealHolds(containers: [NiriContainer], context: NiriInteractionContext) -> Bool {
+        guard let reveal else { return false }
+        guard let column = containers.first(where: { $0.windowNodes.contains(where: { $0.token == reveal.token }) })
+        else { return false }
+        let viewSpan: CGFloat = switch context.orientation {
+        case .horizontal: context.workingFrame.width
+        case .vertical: context.workingFrame.height
+        }
+        return column[keyPath: context.orientation.settledSpanKeyPath] > viewSpan
     }
 
     private func shouldCenterAdjacentPair(

@@ -107,6 +107,11 @@ extension IPCWindowRequest {
         case .assignToScratchpad:
             guard let index = Int(argument), IPCScratchpadSlots.range.contains(index) else { return nil }
             self.init(name: action, windowId: words[1], scratchpadIndex: index)
+        case .reveal:
+            guard let offset = Double(argument), offset.isFinite, offset >= 0,
+                  let span = words.dropFirst(3).first.flatMap(Double.init), span.isFinite, span > 0
+            else { return nil }
+            self.init(name: action, windowId: words[1], offset: offset, span: span)
         case .focus,
              .navigate,
              .summonRight,

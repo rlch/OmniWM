@@ -1809,6 +1809,17 @@ final class TrackpadWorkspaceGestureTests: XCTestCase {
         XCTAssertFalse(fixture.controller.niriLayoutHandler.hasScrollAnimation(for: fixture.ws1))
     }
 
+    func testATrackpadPanClearsAReveal() throws {
+        let fixture = try makeFixture(workspaceSwipeEnabled: false, scrollGestureEnabled: true)
+        try addColumnGestureWindows(to: fixture)
+        let manager = fixture.controller.workspaceManager
+        var state = ViewportState()
+        state.reveal = ViewportReveal(token: WindowToken(pid: 7_001, windowId: 7_101), offset: 100, span: 300)
+        manager.updateNiriViewportState(state, for: fixture.ws1)
+        _ = beginCommittedColumnGesture(fixture)
+        XCTAssertNil(manager.niriViewportState(for: fixture.ws1).reveal)
+    }
+
     func testExpiredGestureDoesNotReleaseNewerOrDifferentSession() throws {
         let fixture = try makeFixture(
             workspaceSwipeEnabled: false,
