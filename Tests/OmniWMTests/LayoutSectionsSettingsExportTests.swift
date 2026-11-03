@@ -30,7 +30,8 @@ final class LayoutSectionsSettingsExportTests: XCTestCase {
             "moveWindowStacksIntoColumn": .boolean(true),
             "allowOverscroll": .boolean(false),
             "overscrollVisibleStripPercent": .integer(5),
-            "partialColumnsAcrossDisplays": .boolean(false)
+            "partialColumnsAcrossDisplays": .boolean(false),
+            "edgeOutset": .float(0)
         ]))
         XCTAssertEqual(tree["dwindle"], .table([
             "smartSplit": .boolean(false),

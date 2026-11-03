@@ -150,7 +150,8 @@ extension WMController {
             edgeOverscroll: settings.niri.edgeOverscroll,
             containerPrimarySpanPresets: settings.niri.containerPrimarySpanPresets,
             defaultContainerPrimarySpan: settings.niri.defaultContainerPrimarySpan,
-            partialColumnsAcrossDisplays: settings.niri.partialColumnsAcrossDisplays
+            partialColumnsAcrossDisplays: settings.niri.partialColumnsAcrossDisplays,
+            edgeOutset: settings.niri.edgeOutset
         )
 
         if dwindleEngine == nil {

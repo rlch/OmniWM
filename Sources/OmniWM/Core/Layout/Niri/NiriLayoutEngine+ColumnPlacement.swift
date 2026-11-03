@@ -120,7 +120,14 @@ extension NiriLayoutEngine {
             context: NiriContainerLayoutContext(
                 frames: pass.context.frames,
                 secondaryGap: pass.context.secondaryGap,
-                time: pass.context.time
+                time: pass.context.time,
+                edgeOutset: NiriEdgeOutset(
+                    points: edgeOutset,
+                    workingFrame: pass.context.area.workingFrame,
+                    primaryGap: pass.context.primaryGap,
+                    secondaryGap: pass.context.secondaryGap,
+                    orientation: pass.context.orientation
+                )
             ),
             result: &result.frames
         )

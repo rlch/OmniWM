@@ -399,6 +399,16 @@ final class NiriScrollVisibilityTests: XCTestCase {
         XCTAssertEqual(horizontalNeighborLayout(fixture, liveOffset: 200).hiddenHandles[fixture.tokens[0]], .left)
     }
 
+    func testEdgeOutsetGrowsEdgeColumnsPastTheScreenWithoutHidingThemAtANeighbor() throws {
+        // The column at the screen's left edge, beside a display at its left.
+        let fixture = makeHorizontalNeighborFixture(neighborX: -1_000)
+        fixture.engine.edgeOutset = 1
+        let layout = horizontalNeighborLayout(fixture, liveOffset: 0)
+        let frame = try XCTUnwrap(layout.frames[fixture.tokens[0]])
+        XCTAssertNil(layout.hiddenHandles[fixture.tokens[0]])
+        XCTAssertEqual(frame, CGRect(x: -1, y: -1, width: 1_002, height: 802))
+    }
+
     func testTheMinorityRuleCountsEachSideAgainstTheWholeRect() {
         let viewport = CGRect(x: 0, y: 0, width: 1_366, height: 800)
         let neighbor = HiddenPlacementMonitorContext(

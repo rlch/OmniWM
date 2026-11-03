@@ -38,6 +38,9 @@ final class NiriLayoutEngine {
     /// A column running less than half onto a neighbouring display stays visible, for macOS to clip.
     var partialColumnsAcrossDisplays = false
 
+    /// Points tiled windows grow past the screen and bar edges they touch, and into each other (`NiriEdgeOutset`).
+    var edgeOutset: CGFloat = 0
+
     var singleWindowFit: SingleWindowFit = .fullScreen
 
     var edgeOverscroll: NiriEdgeOverscroll = .disabled
@@ -258,11 +261,15 @@ final class NiriLayoutEngine {
         edgeOverscroll: NiriEdgeOverscroll? = nil,
         presetContainerPrimarySpans: [PresetSize]? = nil,
         defaultContainerPrimarySpan: CGFloat?? = nil,
-        partialColumnsAcrossDisplays: Bool? = nil
+        partialColumnsAcrossDisplays: Bool? = nil,
+        edgeOutset: CGFloat? = nil
     ) {
         assertSanctionedMutation()
         if let partialColumnsAcrossDisplays {
             self.partialColumnsAcrossDisplays = partialColumnsAcrossDisplays
+        }
+        if let edgeOutset {
+            self.edgeOutset = edgeOutset.clamped(to: 0 ... 8)
         }
         if let max = visibleContainerCount {
             self.visibleContainerCount = max.clamped(to: 1 ... 5)

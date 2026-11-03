@@ -49,6 +49,7 @@ struct NiriContainerLayoutContext {
     let frames: NiriLayoutFrames
     let secondaryGap: CGFloat
     let time: TimeInterval
+    var edgeOutset: NiriEdgeOutset = .none
 }
 
 struct NiriColumnLayoutPass {

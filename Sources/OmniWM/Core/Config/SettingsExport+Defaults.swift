@@ -125,7 +125,8 @@ extension SettingsExport.Niri {
             moveWindowStacksIntoColumn: true,
             allowOverscroll: false,
             overscrollVisibleStripPercent: 5,
-            partialColumnsAcrossDisplays: false
+            partialColumnsAcrossDisplays: false,
+            edgeOutset: 0
         )
     }
 }

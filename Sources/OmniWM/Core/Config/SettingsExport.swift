@@ -116,6 +116,7 @@ struct SettingsExport: Equatable {
         var allowOverscroll: Bool?
         var overscrollVisibleStripPercent: Int?
         var partialColumnsAcrossDisplays: Bool?
+        var edgeOutset: Double?
     }
 
     struct Dwindle: Codable, Equatable {

@@ -81,7 +81,8 @@ extension WMController {
         edgeOverscroll: NiriEdgeOverscroll? = nil,
         containerPrimarySpanPresets: [Double]? = nil,
         defaultContainerPrimarySpan: Double?? = nil,
-        partialColumnsAcrossDisplays: Bool? = nil
+        partialColumnsAcrossDisplays: Bool? = nil,
+        edgeOutset: Double? = nil
     ) {
         niriLayoutHandler.updateNiriConfig(
             visibleContainerCount: visibleContainerCount,
@@ -92,7 +93,8 @@ extension WMController {
             edgeOverscroll: edgeOverscroll,
             containerPrimarySpanPresets: containerPrimarySpanPresets,
             defaultContainerPrimarySpan: defaultContainerPrimarySpan,
-            partialColumnsAcrossDisplays: partialColumnsAcrossDisplays
+            partialColumnsAcrossDisplays: partialColumnsAcrossDisplays,
+            edgeOutset: edgeOutset
         )
     }
 

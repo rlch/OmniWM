@@ -257,7 +257,7 @@ extension NiriLayoutEngine {
                 within: containerFrames,
                 at: context.time
             )
-            result[window.token] = renderedFrame
+            result[window.token] = sizingMode == .normal ? context.edgeOutset.apply(renderedFrame) : renderedFrame
 
             if !isTabbed {
                 pos += span

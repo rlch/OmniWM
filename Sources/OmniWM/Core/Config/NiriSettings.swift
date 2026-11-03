@@ -62,6 +62,10 @@ final class NiriSettings {
         didSet { onChange?() }
     }
 
+    var edgeOutset = NiriSettings.defaults.edgeOutset ?? 0 {
+        didSet { onChange?() }
+    }
+
     var singleWindowFit = NiriSettings.defaults.singleWindowFit {
         didSet { onChange?() }
     }
@@ -115,7 +119,8 @@ final class NiriSettings {
             moveWindowStacksIntoColumn: moveWindowStacksIntoColumn,
             allowOverscroll: allowOverscroll,
             overscrollVisibleStripPercent: overscrollVisibleStripPercent,
-            partialColumnsAcrossDisplays: partialColumnsAcrossDisplays
+            partialColumnsAcrossDisplays: partialColumnsAcrossDisplays,
+            edgeOutset: edgeOutset
         )
     }
 
@@ -128,6 +133,7 @@ final class NiriSettings {
         allowOverscroll = niri.allowOverscroll ?? baseline.allowOverscroll ?? false
         partialColumnsAcrossDisplays = niri.partialColumnsAcrossDisplays
             ?? baseline.partialColumnsAcrossDisplays ?? false
+        edgeOutset = min(max(niri.edgeOutset ?? baseline.edgeOutset ?? 0, 0), 8)
         overscrollVisibleStripPercent = niri.overscrollVisibleStripPercent
             ?? baseline.overscrollVisibleStripPercent ?? 5
         edgeGaps = niri.edgeGaps ?? baseline.edgeGaps ?? true
