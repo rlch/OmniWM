@@ -34,4 +34,10 @@ cp -R "$BIN/OmniWM_OmniWM.bundle" "$APP/Contents/Resources/"
 cp "$BIN/libOmniWMNowPlaying.dylib" "$APP/Contents/Frameworks/"
 "$PYTHON" Scripts/localization.py package --bundle "$BIN/OmniWM_OmniWM.bundle" --app "$APP"
 plutil -lint "$APP/Contents/Info.plist" >/dev/null
+# The snapshot toolchain can call into Swift runtime entry points the oldest macOS the app supports
+# lacks; dyld then stops the app at launch. Known one: a task's isCancelled.
+if nm -u "$APP/Contents/MacOS/OmniWM" | grep -q "_swift_task_isCancelledWithFlags"; then
+  echo "omniwm-fork-build: the binary needs swift_task_isCancelledWithFlags, which macOS 26 lacks" >&2
+  exit 1
+fi
 echo "built $APP"
