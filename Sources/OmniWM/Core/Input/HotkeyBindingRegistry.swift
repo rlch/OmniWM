@@ -30,9 +30,20 @@ enum HotkeyBindingRegistry {
         return HotkeyBinding(id: id, command: command, binding: binding)
     }
 
-    static func makeBinding(id: String, trigger: HotkeyTrigger, modeKey: KeyBinding? = nil) -> HotkeyBinding? {
+    static func makeBinding(
+        id: String,
+        trigger: HotkeyTrigger,
+        modeKey: KeyBinding? = nil,
+        passthroughBundleIDs: [String] = []
+    ) -> HotkeyBinding? {
         guard let command = command(for: id) else { return nil }
-        return HotkeyBinding(id: id, command: command, trigger: trigger, modeKey: modeKey)
+        return HotkeyBinding(
+            id: id,
+            command: command,
+            trigger: trigger,
+            modeKey: modeKey,
+            passthroughBundleIDs: passthroughBundleIDs
+        )
     }
 
     static func reconcilingWorkspaceNumberBindings(
@@ -96,12 +107,20 @@ enum HotkeyBindingRegistry {
                 id: binding.id,
                 command: binding.command,
                 trigger: overrides[binding.id]?.binding ?? .unassigned,
-                modeKey: overrides[binding.id]?.modeKey
+                modeKey: overrides[binding.id]?.modeKey,
+                passthroughBundleIDs: overrides[binding.id]?.passthroughBundleIDs ?? []
             )
         }
         let workspaceNumberBindings = persisted
             .filter { bindingsByID[$0.id] == nil }
-            .compactMap { makeBinding(id: $0.id, trigger: $0.binding, modeKey: $0.modeKey) }
+            .compactMap {
+                makeBinding(
+                    id: $0.id,
+                    trigger: $0.binding,
+                    modeKey: $0.modeKey,
+                    passthroughBundleIDs: $0.passthroughBundleIDs
+                )
+            }
         return staticBindings + workspaceNumberBindings
     }
 
@@ -131,7 +150,13 @@ enum HotkeyBindingRegistry {
             guard !binding.binding.isUnassigned,
                   let trigger = HotkeyTrigger.fromHumanReadable(string)
             else { return binding }
-            return HotkeyBinding(id: binding.id, command: binding.command, trigger: trigger, modeKey: binding.modeKey)
+            return HotkeyBinding(
+                id: binding.id,
+                command: binding.command,
+                trigger: trigger,
+                modeKey: binding.modeKey,
+                passthroughBundleIDs: binding.passthroughBundleIDs
+            )
         }
     }
 }

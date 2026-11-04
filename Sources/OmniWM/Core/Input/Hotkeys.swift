@@ -22,13 +22,18 @@ final class HotkeyCenter {
     var pauseTimeout: Duration?
     let keyboardModeSleep: @MainActor (Duration) async throws -> Void
     let keyboardModeNow: () -> TimeInterval
+    let frontmostBundleID: @MainActor () -> String?
 
     init(
         sleep: @escaping @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
-        now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
+        now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+        frontmostBundleID: @escaping @MainActor () -> String? = {
+            NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        }
     ) {
         keyboardModeSleep = sleep
         keyboardModeNow = now
+        self.frontmostBundleID = frontmostBundleID
     }
 
     var isWindowSwitcherAvailable: Bool {
@@ -209,9 +214,7 @@ final class HotkeyCenter {
 
         carbonRegistrations.register(plan.registrations, failures: &registrationFailures)
 
-        sideSpecificDispatch = plan.sideSpecificRegistrations.map {
-            CommandHotkeyTapMatcher.Entry(binding: $0.binding, command: $0.command)
-        }
+        sideSpecificDispatch = plan.sideSpecificRegistrations.map(CommandHotkeyTapMatcher.Entry.init)
         mouseButtonDispatch = plan.mouseButtonRegistrations
         reconcileEventTap()
         if !sideSpecificDispatch.isEmpty, hyperTriggerTap == nil {
@@ -452,7 +455,7 @@ extension HotkeyCenter {
         return true
     }
 
-    private func dispatchSideSpecificHotkey(keyCode: UInt32, event: CGEvent) -> Bool {
+    func dispatchSideSpecificHotkey(keyCode: UInt32, event: CGEvent) -> Bool {
         guard event.getIntegerValueField(.keyboardEventAutorepeat) == 0 else { return false }
         let rawFlags = event.flags.rawValue
         if let entry = CommandHotkeyTapMatcher.firstMatch(
@@ -460,6 +463,13 @@ extension HotkeyCenter {
             rawFlags: rawFlags,
             entries: sideSpecificDispatch
         ) {
+            if !entry.passthroughBundleIDs.isEmpty {
+                let frontmost = frontmostBundleID()
+                if entry.passesThrough(toFrontmost: frontmost) {
+                    InputTrace.record("hotkey.passthrough cmd=\(entry.command.displayName) app=\(frontmost ?? "-")")
+                    return false
+                }
+            }
             suppressedHotkeyKeyCodes.insert(keyCode)
             InputTrace.record("hotkey.sided cmd=\(entry.command.displayName)")
             routeHotkeyInvocation(

@@ -20,7 +20,8 @@ extension SettingsStore {
             id: hotkeyBindings[index].id,
             command: hotkeyBindings[index].command,
             trigger: newTrigger,
-            modeKey: hotkeyBindings[index].modeKey
+            modeKey: hotkeyBindings[index].modeKey,
+            passthroughBundleIDs: hotkeyBindings[index].passthroughBundleIDs
         )
     }
 
