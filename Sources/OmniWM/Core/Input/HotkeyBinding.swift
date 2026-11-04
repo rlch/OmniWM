@@ -313,6 +313,8 @@ struct HotkeyBinding: Codable, Equatable, Identifiable {
     let command: HotkeyCommand
     var binding: HotkeyTrigger
     var modeKey: KeyBinding?
+    /// Apps whose bundle ID is here get the chord instead of OmniWM while frontmost.
+    var passthroughBundleIDs: [String]
 
     var category: HotkeyCategory {
         ActionCatalog.category(for: id) ?? .focus
@@ -322,17 +324,24 @@ struct HotkeyBinding: Codable, Equatable, Identifiable {
         self.init(id: id, command: command, trigger: binding.isUnassigned ? .unassigned : .chord(binding))
     }
 
-    init(id: String, command: HotkeyCommand, trigger: HotkeyTrigger, modeKey: KeyBinding? = nil) {
+    init(
+        id: String,
+        command: HotkeyCommand,
+        trigger: HotkeyTrigger,
+        modeKey: KeyBinding? = nil,
+        passthroughBundleIDs: [String] = []
+    ) {
         self.id = id
         self.command = command
         binding = HotkeyBindingRegistry.canonicalizeTrigger(trigger)
         self.modeKey = HotkeyBindingRegistry.canonicalizeModeKey(modeKey)
+        self.passthroughBundleIDs = passthroughBundleIDs
     }
 }
 
 extension HotkeyBinding {
     private enum CodingKeys: String, CodingKey {
-        case id, binding, modeKey
+        case id, binding, modeKey, passthroughBundleIDs
     }
 
     init(from decoder: Decoder) throws {
@@ -347,7 +356,14 @@ extension HotkeyBinding {
             )
         }
         let modeKey = try container.decodeIfPresent(KeyBinding.self, forKey: .modeKey)
-        self = HotkeyBinding(id: id, command: command, trigger: trigger, modeKey: modeKey)
+        let passthroughBundleIDs = try container.decodeIfPresent([String].self, forKey: .passthroughBundleIDs) ?? []
+        self = HotkeyBinding(
+            id: id,
+            command: command,
+            trigger: trigger,
+            modeKey: modeKey,
+            passthroughBundleIDs: passthroughBundleIDs
+        )
     }
 
     func encode(to encoder: Encoder) throws {
@@ -355,6 +371,9 @@ extension HotkeyBinding {
         try container.encode(id, forKey: .id)
         try container.encode(binding, forKey: .binding)
         try container.encodeIfPresent(modeKey, forKey: .modeKey)
+        if !passthroughBundleIDs.isEmpty {
+            try container.encode(passthroughBundleIDs, forKey: .passthroughBundleIDs)
+        }
     }
 }
 
@@ -362,19 +381,21 @@ struct PersistedHotkeyBinding: Codable, Equatable {
     let id: String
     let binding: HotkeyTrigger
     let modeKey: KeyBinding?
+    let passthroughBundleIDs: [String]
 
     private enum CodingKeys: String, CodingKey {
-        case id, binding, modeKey
+        case id, binding, modeKey, passthroughBundleIDs
     }
 
     init(id: String, binding: KeyBinding) {
         self.init(id: id, trigger: binding.isUnassigned ? .unassigned : .chord(binding))
     }
 
-    init(id: String, trigger: HotkeyTrigger, modeKey: KeyBinding? = nil) {
+    init(id: String, trigger: HotkeyTrigger, modeKey: KeyBinding? = nil, passthroughBundleIDs: [String] = []) {
         self.id = id
         binding = HotkeyBindingRegistry.canonicalizeTrigger(trigger)
         self.modeKey = HotkeyBindingRegistry.canonicalizeModeKey(modeKey)
+        self.passthroughBundleIDs = passthroughBundleIDs
     }
 
     init(from decoder: Decoder) throws {
@@ -384,6 +405,7 @@ struct PersistedHotkeyBinding: Codable, Equatable {
         modeKey = try HotkeyBindingRegistry.canonicalizeModeKey(
             container.decodeIfPresent(KeyBinding.self, forKey: .modeKey)
         )
+        passthroughBundleIDs = try container.decodeIfPresent([String].self, forKey: .passthroughBundleIDs) ?? []
     }
 
     func encode(to encoder: Encoder) throws {
@@ -391,6 +413,9 @@ struct PersistedHotkeyBinding: Codable, Equatable {
         try container.encode(id, forKey: .id)
         try container.encode(binding, forKey: .binding)
         try container.encodeIfPresent(modeKey, forKey: .modeKey)
+        if !passthroughBundleIDs.isEmpty {
+            try container.encode(passthroughBundleIDs, forKey: .passthroughBundleIDs)
+        }
     }
 }
 

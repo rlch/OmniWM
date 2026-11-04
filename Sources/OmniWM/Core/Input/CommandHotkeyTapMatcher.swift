@@ -58,6 +58,26 @@ enum CommandHotkeyTapMatcher {
     struct Entry: Equatable {
         let binding: KeyBinding
         let command: HotkeyCommand
+        var passthroughBundleIDs: Set<String> = []
+
+        init(binding: KeyBinding, command: HotkeyCommand, passthroughBundleIDs: Set<String> = []) {
+            self.binding = binding
+            self.command = command
+            self.passthroughBundleIDs = passthroughBundleIDs
+        }
+
+        init(_ registration: HotkeyPlannedRegistration) {
+            self.init(
+                binding: registration.binding,
+                command: registration.command,
+                passthroughBundleIDs: registration.passthroughBundleIDs
+            )
+        }
+
+        func passesThrough(toFrontmost bundleID: String?) -> Bool {
+            guard let bundleID else { return false }
+            return passthroughBundleIDs.contains(bundleID)
+        }
     }
 
     static func match(keyCode: UInt32, rawFlags: UInt64, entries: [Entry]) -> HotkeyCommand? {

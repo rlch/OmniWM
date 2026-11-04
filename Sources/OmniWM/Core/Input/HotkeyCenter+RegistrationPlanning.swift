@@ -12,14 +12,25 @@ extension HotkeyCenter {
         return bindings.compactMap { binding in
             let trigger = binding.binding
             guard !trigger.isUnassigned else { return nil }
-            let route = failures[binding.command].map { "unregistered(\($0))" } ?? registeredRoute(for: trigger)
+            let route = failures[binding.command].map { "unregistered(\($0))" } ?? registeredRoute(for: binding)
             return HotkeyBindingFact(command: binding.command.displayName, display: trigger.displayString, route: route)
         }
     }
 
-    private nonisolated static func registeredRoute(for trigger: HotkeyTrigger) -> String {
+    private nonisolated static func registeredRoute(for binding: HotkeyBinding) -> String {
+        let trigger = binding.binding
         if trigger.mouseButtonBinding != nil { return "mouse" }
-        return trigger.chordBinding?.sidedModifiers.isEmpty == false ? "sided" : "carbon"
+        if routesThroughTap(binding) {
+            return binding.passthroughBundleIDs.isEmpty ? "sided" : "passthrough"
+        }
+        return "carbon"
+    }
+
+    /// A sided chord, or one that lets its key through to chosen apps, is matched on the event tap:
+    /// Carbon's RegisterEventHotKey can neither tell sides apart nor hand a key back to the app.
+    nonisolated static func routesThroughTap(_ binding: HotkeyBinding) -> Bool {
+        guard let chord = binding.binding.chordBinding else { return false }
+        return !chord.sidedModifiers.isEmpty || !binding.passthroughBundleIDs.isEmpty
     }
 
     static func decisionLabel(_ decision: HyperTriggerStateMachine.Decision) -> String {
@@ -59,11 +70,15 @@ extension HotkeyCenter {
         for candidate in candidates where failures[candidate.command] == nil {
             switch candidate.binding {
             case let .chord(binding):
-                let registration = HotkeyPlannedRegistration(binding: binding, command: candidate.command)
-                if binding.sidedModifiers.isEmpty {
-                    registrations.append(registration)
-                } else {
+                let registration = HotkeyPlannedRegistration(
+                    binding: binding,
+                    command: candidate.command,
+                    passthroughBundleIDs: Set(candidate.passthroughBundleIDs)
+                )
+                if routesThroughTap(candidate) {
                     sideSpecific.append(registration)
+                } else {
+                    registrations.append(registration)
                 }
             case let .mouseButton(binding):
                 mouseButtons[binding] = candidate.command

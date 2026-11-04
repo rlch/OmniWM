@@ -189,7 +189,7 @@ extension HotkeyCenter {
         )
         sideSpecificDispatch = hyperTriggerTap == nil ? [] : plan.sideSpecificRegistrations
             .filter { isRegistrationAllowed($0.command) }
-            .map { CommandHotkeyTapMatcher.Entry(binding: $0.binding, command: $0.command) }
+            .map(CommandHotkeyTapMatcher.Entry.init)
         mouseButtonDispatch = plan.mouseButtonRegistrations.filter { isRegistrationAllowed($0.value) }
     }
 
