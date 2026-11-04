@@ -97,6 +97,26 @@ final class PartialColumnPreviewTests: XCTestCase {
         XCTAssertFalse(previews.keptFrames.contains(tokens[2]))
     }
 
+    func testAFramesPixelsPerPointAreItsBackingScaleTimesItsFit() throws {
+        var buffer: CVPixelBuffer?
+        CVPixelBufferCreate(
+            nil, 2062, 2588, kCVPixelFormatType_32BGRA,
+            [kCVPixelBufferIOSurfacePropertiesKey: [:]] as CFDictionary, &buffer
+        )
+        let pixels = try XCTUnwrap(buffer)
+        // A 2x window fitted, after a split, into a buffer made for its size before: shown at 2 x 0.64.
+        let fitted = try XCTUnwrap(OverviewPreviewFrame(
+            pixelBuffer: pixels, contentRect: CGRect(x: 0, y: 0, width: 1031, height: 413),
+            scaleFactor: 2, contentScale: 0.64
+        ))
+        XCTAssertEqual(fitted.pixelsPerPoint, 1.28, accuracy: 0.0001)
+        // A window last drawn on a 1x display: a pixel a point, whatever the panel's display.
+        let oneX = try XCTUnwrap(OverviewPreviewFrame(
+            pixelBuffer: pixels, contentRect: CGRect(x: 0, y: 0, width: 1031, height: 1294), scaleFactor: 1
+        ))
+        XCTAssertEqual(oneX.pixelsPerPoint, 1)
+    }
+
     func testTheSettingIsOffByDefaultOptionalAndRoundTrips() throws {
         XCTAssertEqual(SettingsExport.defaults().niri.partialColumnPreview, false)
         var export = SettingsExport.defaults()

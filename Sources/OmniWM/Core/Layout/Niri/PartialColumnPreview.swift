@@ -119,12 +119,13 @@ final class PartialColumnPreviewController {
         panel.startStream = { [system, weak panel] size, generation in
             guard let window = await system.window(token), let panel else { return }
             let scale = system.scale(panel.frame)
-            // The window's own size, so its pixels come 1:1, not scaled to fit.
-            let points = window.frame.size.width > 0 ? window.frame.size : size
+            // The window's size as the layout made it, so its pixels come 1:1, not scaled to fit. Never
+            // the SCWindow's frame: that is the one discovery saw, stale once a split or resize has
+            // changed the window's size.
             let request = OverviewPreviewRequest(
                 handle: handle,
-                pixelWidth: Int((points.width * scale).rounded()),
-                pixelHeight: Int((points.height * scale).rounded())
+                pixelWidth: Int((size.width * scale).rounded()),
+                pixelHeight: Int((size.height * scale).rounded())
             )
             await panel.attach(window: window, request: request, generation: generation)
         }
@@ -209,7 +210,6 @@ final class PartialColumnPreviewPanel: NSPanel {
         guard !destroyed else { return }
         strip = next
         setFrame(next.strip, display: false)
-        contentLayer.contentsScale = screen?.backingScaleFactor ?? contentLayer.contentsScale
         contentLayer.frame = CGRect(origin: .zero, size: next.strip.size)
         applyCrop()
         orderFrontRegardless()
@@ -272,6 +272,9 @@ final class PartialColumnPreviewPanel: NSPanel {
         CATransaction.setDisableActions(true)
         CATransaction.setCompletionBlock { withExtendedLifetime(previous) {} }
         contentLayer.contents = frame.surface
+        // A point of the window is a point of the panel, whatever scale it was drawn at (a window last
+        // drawn on a 1x display, or fitted to a buffer of another size) and whatever the panel's display.
+        contentLayer.contentsScale = frame.pixelsPerPoint
         CATransaction.commit()
         applyCrop()
         alphaValue = 1

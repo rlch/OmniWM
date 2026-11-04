@@ -11,10 +11,26 @@ final class AXOverflowStagingTests: XCTestCase {
     func testAWindowGrowingPastItsScreenMovesItsTrailingEdgeOffFirst() {
         let current = CGRect(x: 0, y: 10, width: 497, height: 700)
         let target = CGRect(x: 0, y: 10, width: 4000, height: 700)
+        // Its trailing edge 40 pt past the screen's, the rest of it still on its own screen.
         XCTAssertEqual(
             AXWindowService.overflowStaging(currentFrame: current, targetFrame: target, screens: [screen]),
-            CGRect(x: 984, y: 10, width: 497, height: 700)
+            CGRect(x: 1064 - 497, y: 10, width: 497, height: 700)
         )
+    }
+
+    func testAWindowGrowingTowardANeighbouringDisplayStaysOnItsOwnScreen() {
+        // A laptop with an iPad to its right, 305 pt lower (AppKit y: their bottoms meet), and a Firefox
+        // column going to full width with a 1 pt edge outset. Staged mostly on the iPad, macOS sized it
+        // to fit the iPad.
+        let laptop = CGRect(x: 0, y: 0, width: 2056, height: 1329)
+        let iPad = CGRect(x: 2056, y: 0, width: 1366, height: 1024)
+        let current = CGRect(x: -1, y: -1, width: 1622, height: 1292)
+        let target = CGRect(x: -1, y: -1, width: 2058, height: 1292)
+        let staged = AXWindowService.overflowStaging(currentFrame: current, targetFrame: target, screens: [laptop, iPad])
+        XCTAssertEqual(staged, CGRect(x: 2057 - 1622, y: -1, width: 1622, height: 1292))
+        if let staged {
+            XCTAssertGreaterThan(staged.intersection(laptop).width, staged.width / 2)
+        }
     }
 
     func testAWindowGrowingPastTheScreensBottomMovesItsBottomEdgeOffFirst() {
@@ -23,7 +39,7 @@ final class AXOverflowStagingTests: XCTestCase {
         let target = CGRect(x: 512, y: -1, width: 513, height: 737)
         XCTAssertEqual(
             AXWindowService.overflowStaging(currentFrame: current, targetFrame: target, screens: [screen]),
-            CGRect(x: 984, y: 40 - 736, width: 512, height: 736)
+            CGRect(x: 1025 - 512, y: -1, width: 512, height: 736)
         )
         // Only the bottom.
         XCTAssertEqual(
@@ -32,7 +48,7 @@ final class AXOverflowStagingTests: XCTestCase {
                 targetFrame: CGRect(x: 0, y: -1, width: 500, height: 737),
                 screens: [screen]
             ),
-            CGRect(x: 0, y: 40 - 736, width: 500, height: 736)
+            CGRect(x: 0, y: -1, width: 500, height: 736)
         )
     }
 
@@ -42,7 +58,7 @@ final class AXOverflowStagingTests: XCTestCase {
         let target = CGRect(x: -1, y: -1, width: 1026, height: 738)
         XCTAssertEqual(
             AXWindowService.overflowStaging(currentFrame: current, targetFrame: target, screens: [screen]),
-            CGRect(x: 984, y: 40 - 737, width: 513, height: 737)
+            CGRect(x: 1025 - 513, y: -1, width: 513, height: 737)
         )
     }
 

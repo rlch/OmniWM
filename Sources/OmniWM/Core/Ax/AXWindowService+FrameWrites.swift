@@ -28,10 +28,15 @@ extension AXWindowService {
         return .sizeThenPosition
     }
 
+    /// How far past its screen's edge a window is staged before it grows: enough for AX to grow it as asked.
+    static let stagingOvershoot: CGFloat = 40
+
     /// Where to put a window before it grows past its screen's trailing or bottom edge, or nil when it
     /// need not move first: AX grows a window whose trailing or bottom edge is on screen only as far as
-    /// that edge, and one whose edge is already past it as far as asked. The window keeps its size, and
-    /// 40 points on screen on the axis it is staged on, which AX keeps of any window it moves.
+    /// that edge, and one whose edge is already past it as far as asked. The window keeps its size and
+    /// its edge goes only just past the screen's (by as much as the target's, at most `stagingOvershoot`),
+    /// so that it stays on its own screen: a window moved mostly onto a neighbouring display is sized
+    /// by macOS to fit that display (a laptop's window grown on an iPad's 1366x1024 came out that size).
     static func overflowStaging(currentFrame: CGRect?, targetFrame: CGRect, screens: [CGRect]) -> CGRect? {
         guard let currentFrame,
               let screen = screens.first(where: { $0.contains(CGPoint(x: targetFrame.minX, y: targetFrame.midY)) })
@@ -48,7 +53,8 @@ extension AXWindowService {
            targetFrame.maxX > screen.maxX + 0.5,
            moved.maxX <= screen.maxX + 0.5
         {
-            origin.x = screen.maxX - 40
+            let past = min(targetFrame.maxX - screen.maxX, stagingOvershoot, currentFrame.width / 4)
+            origin.x = screen.maxX + max(past, 0.5) - currentFrame.width
             staged = true
         }
         // AppKit's y runs up: the bottom edge is minY.
@@ -56,7 +62,8 @@ extension AXWindowService {
            targetFrame.minY < screen.minY - 0.5,
            moved.minY >= screen.minY - 0.5
         {
-            origin.y = screen.minY + 40 - currentFrame.height
+            let past = min(screen.minY - targetFrame.minY, stagingOvershoot, currentFrame.height / 4)
+            origin.y = screen.minY - max(past, 0.5)
             staged = true
         }
         return staged ? CGRect(origin: origin, size: currentFrame.size) : nil

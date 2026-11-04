@@ -65,10 +65,12 @@ final class OverviewPreviewStream: NSObject, SCStreamOutput, SCStreamDelegate, S
             contentRect = metadata[.contentRect] as? CGRect
         }
         let scaleFactor = (metadata[.scaleFactor] as? NSNumber)?.doubleValue ?? 1
+        let contentScale = (metadata[.contentScale] as? NSNumber)?.doubleValue ?? 1
         guard let frame = OverviewPreviewFrame(
             pixelBuffer: pixelBuffer,
             contentRect: contentRect,
-            scaleFactor: scaleFactor
+            scaleFactor: scaleFactor,
+            contentScale: contentScale
         ) else { return }
         offer(frame)
     }

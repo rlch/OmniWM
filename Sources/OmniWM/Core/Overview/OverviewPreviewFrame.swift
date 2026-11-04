@@ -9,8 +9,11 @@ final class OverviewPreviewFrame: @unchecked Sendable {
     private let pixelBuffer: CVPixelBuffer
     let surface: IOSurface
     let contentsRect: CGRect
+    /// The buffer's pixels for each point of the window: its backing scale times the scale it was fitted
+    /// to the buffer by.
+    let pixelsPerPoint: CGFloat
 
-    init?(pixelBuffer: CVPixelBuffer, contentRect: CGRect? = nil, scaleFactor: CGFloat = 1) {
+    init?(pixelBuffer: CVPixelBuffer, contentRect: CGRect? = nil, scaleFactor: CGFloat = 1, contentScale: CGFloat = 1) {
         guard let surface = CVPixelBufferGetIOSurface(pixelBuffer)?.takeUnretainedValue() else { return nil }
         let width = CGFloat(CVPixelBufferGetWidth(pixelBuffer))
         let height = CGFloat(CVPixelBufferGetHeight(pixelBuffer))
@@ -27,6 +30,7 @@ final class OverviewPreviewFrame: @unchecked Sendable {
         } else {
             contentsRect = CGRect(x: 0, y: 0, width: 1, height: 1)
         }
+        pixelsPerPoint = contentScale.isFinite && contentScale > 0 ? scaleFactor * contentScale : scaleFactor
         self.surface = surface
         self.pixelBuffer = pixelBuffer
         self.surface.incrementUseCount()
